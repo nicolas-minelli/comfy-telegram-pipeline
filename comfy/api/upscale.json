@@ -1,0 +1,116 @@
+{
+  "3": {
+    "inputs": {
+      "model_name": "RealESRGAN_x2plus.pth"
+    },
+    "class_type": "UpscaleModelLoader",
+    "_meta": {
+      "title": "Load Upscale Model"
+    }
+  },
+  "5": {
+    "inputs": {
+      "video": "E:/COMFY_OUTPUT/video/n8n/tg-0-1-e1/interpolation.mp4",
+      "force_rate": 0,
+      "custom_width": 0,
+      "custom_height": 0,
+      "frame_load_cap": 0,
+      "skip_first_frames": 0,
+      "select_every_nth": 1,
+      "format": "None",
+      "meta_batch": [
+        "8",
+        0
+      ]
+    },
+    "class_type": "VHS_LoadVideoPath",
+    "_meta": {
+      "title": "Load Video (Upload) 🎥🅥🅗🅢"
+    }
+  },
+  "7": {
+    "inputs": {
+      "upscale_model": [
+        "3",
+        0
+      ],
+      "image": [
+        "5",
+        0
+      ]
+    },
+    "class_type": "ImageUpscaleWithModel",
+    "_meta": {
+      "title": "Upscale Image (using Model)"
+    }
+  },
+  "8": {
+    "inputs": {
+      "frames_per_batch": 8
+    },
+    "class_type": "VHS_BatchManager",
+    "_meta": {
+      "title": "Meta Batch Manager 🎥🅥🅗🅢"
+    }
+  },
+  "15": {
+    "inputs": {
+      "upscale_method": "lanczos",
+      "width": 1088,
+      "height": 1920,
+      "crop": "center",
+      "image": [
+        "7",
+        0
+      ]
+    },
+    "class_type": "ImageScale",
+    "_meta": {
+      "title": "Upscale Image"
+    }
+  },
+  "17": {
+    "inputs": {
+      "frame_rate": 60,
+      "loop_count": 0,
+      "filename_prefix": "video/n8n/tg-0-1-e1/upscale",
+      "format": "video/h264-mp4",
+      "pix_fmt": "yuv420p",
+      "crf": 18,
+      "save_metadata": true,
+      "trim_to_audio": false,
+      "pingpong": false,
+      "save_output": true,
+      "images": [
+        "15",
+        0
+      ],
+      "meta_batch": [
+        "8",
+        0
+      ],
+      "audio": [
+        "5",
+        2
+      ]
+    },
+    "class_type": "VHS_VideoCombine",
+    "_meta": {
+      "title": "Video Combine 🎥🅥🅗🅢"
+    }
+  },
+  "900": {
+    "inputs": {
+      "filenames": [
+        "17",
+        0
+      ],
+      "run_id": "tg-0-1-e1",
+      "final_basename": "tg-0-1"
+    },
+    "class_type": "N8NMoveFinalVideo",
+    "_meta": {
+      "title": "Move Final Video to Final Folder (n8n)"
+    }
+  }
+}

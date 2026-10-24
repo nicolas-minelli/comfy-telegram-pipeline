@@ -1,0 +1,2569 @@
+{
+  "name": "Telegram Bot v1",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "MULTI JOB CANDIDATE\nKeep this single Telegram Trigger and its identity. Native v1.2 chat/user filters remain empty: Authorize Telegram Update enforces both IDs.\nRequires same /files mount and fs allowlist in bot + main + error/recovery workflows.\nSelect Video Queue Error Handler in workflow settings for both main and bot.\n/status or /queue: multiple job states. /retry REQUEST_ID: recover a specific job.\nComfy generations use native queue. Post processing reserves the GPU pipeline through the last VHS batch.\nInstall both updated workflows together; never auto-retry GPU POSTs.",
+        "height": 340,
+        "width": 620
+      },
+      "name": "Setup Notes",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "id": "efdadaf6-0797-5956-b66a-48e5c04819b6",
+      "position": [
+        12752,
+        14368
+      ]
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json.chat_id }}",
+        "text": "={{ $json.text }}",
+        "replyMarkup": "inlineKeyboard",
+        "inlineKeyboard": {
+          "rows": [
+            {
+              "row": {
+                "buttons": [
+                  {
+                    "text": "={{ $json.keyboard.rows[0].row.buttons[0].text }}",
+                    "additionalFields": {
+                      "callback_data": "={{ $json.keyboard.rows[0].row.buttons[0].additionalFields.callback_data }}"
+                    }
+                  },
+                  {
+                    "text": "={{ $json.keyboard.rows[0].row.buttons[1].text }}",
+                    "additionalFields": {
+                      "callback_data": "={{ $json.keyboard.rows[0].row.buttons[1].additionalFields.callback_data }}"
+                    }
+                  },
+                  {
+                    "text": "={{ $json.keyboard.rows[0].row.buttons[2].text }}",
+                    "additionalFields": {
+                      "callback_data": "={{ $json.keyboard.rows[0].row.buttons[2].additionalFields.callback_data }}"
+                    }
+                  },
+                  {
+                    "text": "={{ $json.keyboard.rows[0].row.buttons[3].text }}",
+                    "additionalFields": {
+                      "callback_data": "={{ $json.keyboard.rows[0].row.buttons[3].additionalFields.callback_data }}"
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "row": {
+                "buttons": [
+                  {
+                    "text": "={{ $json.keyboard.rows[1].row.buttons[0].text }}",
+                    "additionalFields": {
+                      "callback_data": "={{ $json.keyboard.rows[1].row.buttons[0].additionalFields.callback_data }}"
+                    }
+                  },
+                  {
+                    "text": "={{ $json.keyboard.rows[1].row.buttons[1].text }}",
+                    "additionalFields": {
+                      "callback_data": "={{ $json.keyboard.rows[1].row.buttons[1].additionalFields.callback_data }}"
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        "additionalFields": {
+          "appendAttribution": false,
+          "parse_mode": "HTML"
+        }
+      },
+      "name": "Send Native Keyboard 07",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "id": "35d09d14-4e77-5f97-8340-d3663044f5e2",
+      "position": [
+        17040,
+        15840
+      ],
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1500
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json.chat_id }}",
+        "text": "={{ $json.text }}",
+        "replyMarkup": "inlineKeyboard",
+        "inlineKeyboard": {
+          "rows": [
+            {
+              "row": {
+                "buttons": [
+                  {
+                    "text": "={{ $json.keyboard.rows[0].row.buttons[0].text }}",
+                    "additionalFields": {
+                      "callback_data": "={{ $json.keyboard.rows[0].row.buttons[0].additionalFields.callback_data }}"
+                    }
+                  },
+                  {
+                    "text": "={{ $json.keyboard.rows[0].row.buttons[1].text }}",
+                    "additionalFields": {
+                      "callback_data": "={{ $json.keyboard.rows[0].row.buttons[1].additionalFields.callback_data }}"
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "row": {
+                "buttons": [
+                  {
+                    "text": "={{ $json.keyboard.rows[1].row.buttons[0].text }}",
+                    "additionalFields": {
+                      "callback_data": "={{ $json.keyboard.rows[1].row.buttons[0].additionalFields.callback_data }}"
+                    }
+                  },
+                  {
+                    "text": "={{ $json.keyboard.rows[1].row.buttons[1].text }}",
+                    "additionalFields": {
+                      "callback_data": "={{ $json.keyboard.rows[1].row.buttons[1].additionalFields.callback_data }}"
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "row": {
+                "buttons": [
+                  {
+                    "text": "={{ $json.keyboard.rows[2].row.buttons[0].text }}",
+                    "additionalFields": {
+                      "callback_data": "={{ $json.keyboard.rows[2].row.buttons[0].additionalFields.callback_data }}"
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        "additionalFields": {
+          "appendAttribution": false,
+          "parse_mode": "HTML"
+        }
+      },
+      "name": "Send Native Keyboard 06",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "id": "272ca522-e7a4-53ee-903c-53b94cb7243f",
+      "position": [
+        17040,
+        15648
+      ],
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1500
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json.chat_id }}",
+        "text": "={{ $json.text }}",
+        "replyMarkup": "inlineKeyboard",
+        "inlineKeyboard": {
+          "rows": [
+            {
+              "row": {
+                "buttons": [
+                  {
+                    "text": "={{ $json.keyboard.rows[0].row.buttons[0].text }}",
+                    "additionalFields": {
+                      "callback_data": "={{ $json.keyboard.rows[0].row.buttons[0].additionalFields.callback_data }}"
+                    }
+                  },
+                  {
+                    "text": "={{ $json.keyboard.rows[0].row.buttons[1].text }}",
+                    "additionalFields": {
+                      "callback_data": "={{ $json.keyboard.rows[0].row.buttons[1].additionalFields.callback_data }}"
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "row": {
+                "buttons": [
+                  {
+                    "text": "={{ $json.keyboard.rows[1].row.buttons[0].text }}",
+                    "additionalFields": {
+                      "callback_data": "={{ $json.keyboard.rows[1].row.buttons[0].additionalFields.callback_data }}"
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "row": {
+                "buttons": [
+                  {
+                    "text": "={{ $json.keyboard.rows[2].row.buttons[0].text }}",
+                    "additionalFields": {
+                      "callback_data": "={{ $json.keyboard.rows[2].row.buttons[0].additionalFields.callback_data }}"
+                    }
+                  },
+                  {
+                    "text": "={{ $json.keyboard.rows[2].row.buttons[1].text }}",
+                    "additionalFields": {
+                      "callback_data": "={{ $json.keyboard.rows[2].row.buttons[1].additionalFields.callback_data }}"
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        "additionalFields": {
+          "appendAttribution": false,
+          "parse_mode": "HTML"
+        }
+      },
+      "name": "Send Native Keyboard 05",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "id": "952fcc5c-ac89-56cd-a623-e3db25abfac3",
+      "position": [
+        17040,
+        15456
+      ],
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1500
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json.chat_id }}",
+        "text": "={{ $json.text }}",
+        "replyMarkup": "inlineKeyboard",
+        "inlineKeyboard": {
+          "rows": [
+            {
+              "row": {
+                "buttons": [
+                  {
+                    "text": "={{ $json.keyboard.rows[0].row.buttons[0].text }}",
+                    "additionalFields": {
+                      "callback_data": "={{ $json.keyboard.rows[0].row.buttons[0].additionalFields.callback_data }}"
+                    }
+                  },
+                  {
+                    "text": "={{ $json.keyboard.rows[0].row.buttons[1].text }}",
+                    "additionalFields": {
+                      "callback_data": "={{ $json.keyboard.rows[0].row.buttons[1].additionalFields.callback_data }}"
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        "additionalFields": {
+          "appendAttribution": false,
+          "parse_mode": "HTML"
+        }
+      },
+      "name": "Send Native Keyboard 04",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "id": "cd0d577b-7ed4-5143-a70d-47eab57c84af",
+      "position": [
+        17040,
+        15264
+      ],
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1500
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json.chat_id }}",
+        "text": "={{ $json.text }}",
+        "replyMarkup": "inlineKeyboard",
+        "inlineKeyboard": {
+          "rows": [
+            {
+              "row": {
+                "buttons": [
+                  {
+                    "text": "={{ $json.keyboard.rows[0].row.buttons[0].text }}",
+                    "additionalFields": {
+                      "callback_data": "={{ $json.keyboard.rows[0].row.buttons[0].additionalFields.callback_data }}"
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "row": {
+                "buttons": [
+                  {
+                    "text": "={{ $json.keyboard.rows[1].row.buttons[0].text }}",
+                    "additionalFields": {
+                      "callback_data": "={{ $json.keyboard.rows[1].row.buttons[0].additionalFields.callback_data }}"
+                    }
+                  },
+                  {
+                    "text": "={{ $json.keyboard.rows[1].row.buttons[1].text }}",
+                    "additionalFields": {
+                      "callback_data": "={{ $json.keyboard.rows[1].row.buttons[1].additionalFields.callback_data }}"
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "row": {
+                "buttons": [
+                  {
+                    "text": "={{ $json.keyboard.rows[2].row.buttons[0].text }}",
+                    "additionalFields": {
+                      "callback_data": "={{ $json.keyboard.rows[2].row.buttons[0].additionalFields.callback_data }}"
+                    }
+                  },
+                  {
+                    "text": "={{ $json.keyboard.rows[2].row.buttons[1].text }}",
+                    "additionalFields": {
+                      "callback_data": "={{ $json.keyboard.rows[2].row.buttons[1].additionalFields.callback_data }}"
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "row": {
+                "buttons": [
+                  {
+                    "text": "={{ $json.keyboard.rows[3].row.buttons[0].text }}",
+                    "additionalFields": {
+                      "callback_data": "={{ $json.keyboard.rows[3].row.buttons[0].additionalFields.callback_data }}"
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        "additionalFields": {
+          "appendAttribution": false,
+          "parse_mode": "HTML"
+        }
+      },
+      "name": "Send Native Keyboard 03",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "id": "2f1db54e-97f3-5e1d-9179-36a50f9cbd1e",
+      "position": [
+        17040,
+        15072
+      ],
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1500
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json.chat_id }}",
+        "text": "={{ $json.text }}",
+        "replyMarkup": "inlineKeyboard",
+        "inlineKeyboard": {
+          "rows": [
+            {
+              "row": {
+                "buttons": [
+                  {
+                    "text": "={{ $json.keyboard.rows[0].row.buttons[0].text }}",
+                    "additionalFields": {
+                      "callback_data": "={{ $json.keyboard.rows[0].row.buttons[0].additionalFields.callback_data }}"
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "row": {
+                "buttons": [
+                  {
+                    "text": "={{ $json.keyboard.rows[1].row.buttons[0].text }}",
+                    "additionalFields": {
+                      "callback_data": "={{ $json.keyboard.rows[1].row.buttons[0].additionalFields.callback_data }}"
+                    }
+                  },
+                  {
+                    "text": "={{ $json.keyboard.rows[1].row.buttons[1].text }}",
+                    "additionalFields": {
+                      "callback_data": "={{ $json.keyboard.rows[1].row.buttons[1].additionalFields.callback_data }}"
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "row": {
+                "buttons": [
+                  {
+                    "text": "={{ $json.keyboard.rows[2].row.buttons[0].text }}",
+                    "additionalFields": {
+                      "callback_data": "={{ $json.keyboard.rows[2].row.buttons[0].additionalFields.callback_data }}"
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        "additionalFields": {
+          "appendAttribution": false,
+          "parse_mode": "HTML"
+        }
+      },
+      "name": "Send Native Keyboard 02",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "id": "b48f078c-d4c9-54ef-8cb7-13fb657831e8",
+      "position": [
+        17040,
+        14880
+      ],
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1500
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json.chat_id }}",
+        "text": "={{ $json.text }}",
+        "replyMarkup": "inlineKeyboard",
+        "inlineKeyboard": {
+          "rows": [
+            {
+              "row": {
+                "buttons": [
+                  {
+                    "text": "={{ $json.keyboard.rows[0].row.buttons[0].text }}",
+                    "additionalFields": {
+                      "callback_data": "={{ $json.keyboard.rows[0].row.buttons[0].additionalFields.callback_data }}"
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        "additionalFields": {
+          "appendAttribution": false,
+          "parse_mode": "HTML"
+        }
+      },
+      "name": "Send Native Keyboard 01",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "id": "ccde69fa-b810-5ed5-9a08-1dcead536b1e",
+      "position": [
+        17040,
+        14688
+      ],
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1500
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json.chat_id }}",
+        "text": "={{ $json.text }}",
+        "additionalFields": {
+          "appendAttribution": false,
+          "parse_mode": "HTML"
+        }
+      },
+      "name": "Send Plain Reply",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "id": "175dcb41-3e69-5ee7-81e3-223ba07ec71e",
+      "position": [
+        17040,
+        14496
+      ],
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1500
+    },
+    {
+      "parameters": {
+        "mode": "expression",
+        "numberOutputs": 11,
+        "output": "={{ Math.max(0, [\"\", \"1\", \"1,2,1\", \"1,2,2,1\", \"2\", \"2,1,2\", \"2,2,1\", \"4,2\", \"2,2,2,2\", \"1,2,2,2\", \"2,2,2,2,1\"].indexOf(($json.keyboard?.rows ?? []).map(r => r.row.buttons.length).join(\",\"))) }}"
+      },
+      "name": "Send Wizard Reply",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "id": "bc1b582e-e859-55ce-aa8c-9a6ef4051ed1",
+      "position": [
+        16816,
+        15152
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const base = $('Handle Telegram Wizard').first().json;\nconst response = $input.first().json;\nreturn [{json:{...base,text: (response.error ? '⚠️ Não foi possível enviar a prévia da imagem; confira o arquivo local.\\n\\n' : '') + base.text}}];"
+      },
+      "name": "Restore Wizard Reply",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "id": "35197c76-7321-5f72-ba7e-6947594ea702",
+      "position": [
+        16592,
+        16400
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "sendPhoto",
+        "chatId": "={{ $('Handle Telegram Wizard').first().json.chat_id }}",
+        "binaryData": true,
+        "additionalFields": {
+          "caption": "First frame selecionado. Confira a imagem antes de gerar."
+        }
+      },
+      "name": "Send Image Preview",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "id": "6dd1f847-e891-555a-b36c-ea176448da36",
+      "position": [
+        16368,
+        16400
+      ],
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1500,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "fileSelector": "={{ $json.preview_path }}",
+        "options": {
+          "dataPropertyName": "data"
+        }
+      },
+      "name": "Read Selected Image",
+      "type": "n8n-nodes-base.readWriteFile",
+      "typeVersion": 1,
+      "id": "3be4c66b-8281-5bb8-ac59-43e8b9f64461",
+      "position": [
+        16144,
+        16400
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "2bb1bbe7-7d63-43a2-9f64-8fc079efbc65",
+              "leftValue": "={{ $json.preview }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "name": "Send Image Preview?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "id": "19819d64-e88a-504e-b579-e928eb6cf1ac",
+      "position": [
+        15920,
+        16464
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// A dispatch uncertainty belongs to a request, never to the whole chat.\nconst D=(()=>{\n const fs=require('fs'),root='/files/.telegram-ui';\n const valid=id=>typeof id==='string'&&/^tg-0-[0-9]+$/.test(id);\n const read=p=>fs.existsSync(p)?JSON.parse(fs.readFileSync(p,'utf8')):null;\n const fp=r=>JSON.stringify([r.image,r.prompt.trim(),(r.negative_prompt??'').trim(),r.duration_seconds,...(r.aspect_ratio===undefined?[]:[r.aspect_ratio])]);\n const request=r=>!!r&&valid(r.request_id)&&(r.aspect_ratio===undefined||['9:16','16:9'].includes(r.aspect_ratio))&&typeof r.image==='string'&&/^[A-Za-z0-9][A-Za-z0-9_-]*\\.(png|jpe?g|webp)$/i.test(r.image)&&typeof r.prompt==='string'&&!!r.prompt.trim()&&r.prompt.length<=3000&&typeof(r.negative_prompt??'')==='string'&&[2,4,6,8,10].includes(r.duration_seconds);\n function lookup(id,r){\n  if(!valid(id))return {kind:'invalid'};\n  let reg;try{reg=read(root+'/scheduler/jobs/'+id+'.json');}catch(_){return {kind:'corrupt'};}\n  if(!reg)return {kind:'missing'};\n  if(reg.request_id!==id)return {kind:'conflict',reg};\n  if(reg.cleared_at)return {kind:'cleared',reg};\n  if(['deleted','deleting'].includes(reg.status))return {kind:reg.status,reg};\n  if(r&&reg.fingerprint!==fp(r))return {kind:'conflict',reg};\n  return {kind:'registered',reg};\n }\n function ownsSubmission(state,id){return state.submitting_request_id===id||(!state.submitting_request_id&&state.last_job?.request_id===id&&request(state.last_job.request)&&typeof state.submitting_draft?.prompt==='string'&&fp(state.submitting_draft)===fp(state.last_job.request));}\n function sync(state){\n  state.dispatches??={};\n  const last=state.last_job;\n  if(last&&['claiming','uncertain'].includes(last.status)&&request(last.request)&&!state.dispatches[last.request_id])state.dispatches[last.request_id]={request:last.request,status:last.status,created_at:last.created_at??new Date().toISOString()};\n  for(const [id,e] of Object.entries(state.dispatches)){\n   if(!request(e.request))continue;\n   const found=lookup(id,e.request);\n   if(found.kind==='registered'){\n    e.status=found.reg.status;e.main_execution_id=found.reg.execution_id;e.prompt_id=found.reg.prompt_id??null;\n    if(state.last_job?.request_id===id){state.last_job.status=e.status;state.last_job.main_execution_id=e.main_execution_id;state.last_job.prompt_id=e.prompt_id;}\n    if(ownsSubmission(state,id)){delete state.submitting_draft;delete state.submitting_request_id;}\n   }else if(['deleted','deleting','cleared'].includes(found.kind)){\n    if(ownsSubmission(state,id)){delete state.submitting_draft;delete state.submitting_request_id;}\n    delete state.dispatches[id];if(state.last_job?.request_id===id)state.last_job=null;\n   }else if(found.kind==='conflict'||found.kind==='corrupt')e.status='registration_conflict';\n   else if(['claiming','uncertain','accepted'].includes(e.status))e.status='uncertain';\n  }\n  return state;\n }\n function saved(state,id){\n  if(!valid(id))return null;\n  let e=state.dispatches?.[id];\n  if(!e){const a=read(root+'/jobs/'+id+'.json');if(request(a?.request))e={request:a.request,draft:a.draft,status:'uncertain'};}\n  if(!e&&state.last_job?.request_id===id&&request(state.last_job.request))e={request:state.last_job.request,status:state.last_job.status};\n  return e&&request(e.request)?e:null;\n }\n return {lookup,sync,saved,fp,valid,request,ownsSubmission};\n})();\n\nconst fs=require('fs');\nconst base=$('Handle Telegram Wizard').first().json;\nconst q=$input.first().json;\nconst root='/files/.telegram-ui/scheduler';\nconst esc=s=>String(s??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');\nconst labels={recovering:'recuperando após reinício',recovery_pending:'aguardando reenvio automático',recovery_needs_restart:'recuperação: reiniciar Comfy para resolver envio incerto',recovery_needs_data:'recuperação: conferir parâmetros originais',recovery_needs_image:'recuperação: reenviar first frame',recovery_needs_review:'recuperação: conferir arquivo final',registered:'registrado',waiting_generation:'aguardando envio ao Comfy',generation_submitting:'enviando geração',generating:'na fila/geração LTX',awaiting_review:'aguardando sua aprovação',waiting_postprocess:'aguardando pós-processamento',postprocess_waiting_for_idle:'aguardando terminar a fila Comfy',interpolating:'interpolação',upscaling:'upscale',finished:'finalizado',rejected:'rejeitado',failed:'falhou',cancelled:'interrompido manualmente'};\nlet list=[];\nif(fs.existsSync(root+'/jobs'))for(const name of fs.readdirSync(root+'/jobs')){\n  if(!new RegExp('^tg-'+base.chat_id+'-[0-9]+\\\\.json$').test(name))continue;\n  const j=JSON.parse(fs.readFileSync(root+'/jobs/'+name,'utf8'));if(!j.cleared_at&&!['deleted','deleting'].includes(j.status))list.push(j);\n}\nlist.sort((a,b)=>String(b.created_at).localeCompare(String(a.created_at)));\nconst open=list.filter(j=>!['finished','rejected','failed','cancelled'].includes(j.status));\nconst shown=[...open,...list.filter(j=>!open.includes(j))].slice(0,10);\nlet text='<b>📋 Jobs</b>\\n'+(shown.length?shown.map(j=>`${esc(j.request_id)}\\n↳ ${esc(labels[j.status]??j.status)}${j.request?.aspect_ratio?' · '+esc(j.request.aspect_ratio):''}${j.wait_detail&&['waiting_generation','waiting_postprocess','postprocess_waiting_for_idle'].includes(j.status)?'\\n   Motivo: '+esc(j.wait_detail):''}${j.history_poll?.unavailable&&['generating','interpolating','upscaling'].includes(j.status)?'\\n   Monitoramento: consulta temporariamente indisponível ('+esc(j.history_poll.failures)+' tentativa(s)); sem reenvio da etapa.':''}${j.recovery_wake_error?'\\n   Supervisor: '+esc(j.recovery_wake_error):''}`).join('\\n\\n'):'Nenhum job visível na listagem.');\ntext+=`\\n\\nEm aberto: ${open.length}. Mostrando até 10 jobs.\\nUse /retry REQUEST_ID para recuperar os parâmetros de um vídeo específico.`;\nif(fs.existsSync(root+'/control.json')){\n  const c=JSON.parse(fs.readFileSync(root+'/control.json','utf8'));\n  if(c.recovery_active)text+='\\n\\n♻️ Recuperação em andamento. Aguardando Comfy vazio para reorganizar a fila.';\n  if(!c.recovery_active&&(c.paused||c.lease?.blocked))text+='\\n\\n⚠️ Admissão pausada. Confira a falha e a reserva antes de liberar.';\n  const boot=fs.existsSync('/files/.telegram-ui/comfy-boot.json')?JSON.parse(fs.readFileSync('/files/.telegram-ui/comfy-boot.json','utf8')):null;\n  if(boot?.boot_id&&c.reconciled_boot!==boot.boot_id)text+='\\n\\n♻️ Reinício do Comfy ainda não reconciliado. Use /recover e confira se Video Queue - Automatic Recovery está publicado.';\n  if(c.lease){text+='\\nReserva: '+esc(c.lease.kind)+' — '+esc(c.lease.request_id);if(!list.some(j=>j.request_id===c.lease.request_id))text+='\\n↳ Reserva residual de um pedido fora da listagem; não é uma tarefa na fila do Comfy.';}\n  if(c.stop_pending)text+='\\n\\n🛑 Parada pendente de confirmação.';\n  if(c.stop_last_error)text+='\\n'+esc(c.stop_last_error);\n}\nconst stateFile=base.state_path??('/files/.telegram-ui/'+base.chat_id+'-'+base.user_id+'.json');\nif(fs.existsSync(stateFile)){\n const ui=D.sync(JSON.parse(fs.readFileSync(stateFile,'utf8')));\n const pending=Object.entries(ui.dispatches??{}).filter(([id,e])=>['claiming','uncertain','registration_conflict'].includes(e.status)&&!['registered','deleted','deleting'].includes(D.lookup(id,e.request).kind));\n if(pending.length)text+='\\n\\n<b>Envios sem confirmação: '+pending.length+'</b>\\n'+pending.slice(0,5).map(([id])=>esc(id)).join('\\n')+'\\nNão bloqueiam outros vídeos. Use /retry REQUEST_ID para conferir o mesmo pedido.';\n}\ntext+=q.error||!Array.isArray(q.queue_running)||!Array.isArray(q.queue_pending)?'\\n\\nComfy sem resposta.':'\\n\\nComfy: '+q.queue_running.length+' executando; '+q.queue_pending.length+' na fila.';\nreturn [{json:{...base,text}}];\n"
+      },
+      "name": "Build Status Reply",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "id": "e3bfeb17-0019-5d11-b69b-48b464d4e326",
+      "position": [
+        16592,
+        16208
+      ]
+    },
+    {
+      "parameters": {
+        "url": "http://host.docker.internal:8188/queue",
+        "options": {
+          "timeout": 5000
+        }
+      },
+      "name": "Get Comfy Queue",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "id": "d30359f7-6f10-5232-b27a-3ee21a88dfe9",
+      "position": [
+        16368,
+        16208
+      ],
+      "retryOnFail": false,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "4691c503-2007-4aae-a019-3ea086e16b33",
+              "leftValue": "={{ $json.route === 'status' }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "name": "Check Status?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "id": "fd8d1d7b-0616-51e7-a467-0ae70cb63277",
+      "position": [
+        15696,
+        16272
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Docker incarnation: a restart gets a new mutex namespace. Old empty locks are not stolen.\nconst RUNTIME=(()=>{const f=require('fs');try{\n const boot=f.readFileSync('/proc/sys/kernel/random/boot_id','utf8').trim();\n const stat=f.readFileSync('/proc/1/stat','utf8');const fields=stat.slice(stat.lastIndexOf(')')+2).split(' ');\n if(!/^[a-f0-9-]{36}$/.test(boot)||!/^\\d+$/.test(fields[19]))throw Error();return boot+'-'+fields[19];\n}catch(_){throw new Error('Recovery requires the configured Linux Docker container (/proc readable).');}})();\n\n// Shared, embedded in Code nodes. Requires only built-in fs and shared /files.\nconst S = (() => {\n  const fs=require('fs');\n  const root='/files/.telegram-ui/scheduler', jobs=root+'/jobs', control=root+'/control.json';\n  fs.mkdirSync(jobs,{recursive:true,mode:0o700});\n  const execution=String($execution.id);\n  const valid=id=>typeof id==='string'&&/^[A-Za-z0-9_-]{1,80}$/.test(id);\n  const jobPath=id=>{if(!valid(id))throw new Error('Invalid request_id');return jobs+'/'+id+'.json';};\n  const read=(p,fallback)=>fs.existsSync(p)?JSON.parse(fs.readFileSync(p,'utf8')):fallback;\n  function write(p,value){\n    const temp=p+'.tmp-'+execution+'-'+Date.now();let fd;\n    try{fd=fs.openSync(temp,'wx',0o600);fs.writeFileSync(fd,JSON.stringify(value));fs.fsyncSync(fd);fs.closeSync(fd);fd=undefined;fs.renameSync(temp,p);}\n    finally{if(fd!==undefined)fs.closeSync(fd);if(fs.existsSync(temp))fs.unlinkSync(temp);}\n  }\n  function tx(fn){\n    let fd;try{fd=fs.openSync(control+'.lock-'+RUNTIME,'wx',0o600);}catch(e){if(e.code==='EEXIST')return {mutex_busy:true};throw e;}\n    try{const c=read(control,{version:1,lease:null,generation_waiters:[],postprocess_waiters:[]});c.generation_waiters??=[];c.postprocess_waiters??=[];const result=fn(c);write(control,c);return result;}\n    finally{fs.closeSync(fd);fs.unlinkSync(control+'.lock-'+RUNTIME);}\n  }\n  const get=id=>read(jobPath(id),null);\n  const patch=(id,data)=>{const j=get(id);if(!j)throw new Error('Missing job '+id);const index=read(root+'/executions/'+execution+'.json',null);if(index?.request_id===id&&j.execution_id!==execution)throw new Error('Obsolete worker fenced by recovery.');if(j.cancel_requested&&execution===j.execution_id&&data.status&&data.status!=='deleted')data={...data,status:j.status};Object.assign(j,data,{updated_at:new Date().toISOString()});write(jobPath(id),j);return j;};\n  function owned(c,kind){if(c.lease?.owner!==execution||c.lease?.kind!==kind||c.lease.blocked)throw new Error('Comfy reservation is absent or blocked; inspect scheduler before resubmitting.');}\n  return {fs,root,jobs,execution,valid,jobPath,read,write,tx,get,patch,owned,control};\n})();\n// A dispatch uncertainty belongs to a request, never to the whole chat.\nconst D=(()=>{\n const fs=require('fs'),root='/files/.telegram-ui';\n const valid=id=>typeof id==='string'&&/^tg-0-[0-9]+$/.test(id);\n const read=p=>fs.existsSync(p)?JSON.parse(fs.readFileSync(p,'utf8')):null;\n const fp=r=>JSON.stringify([r.image,r.prompt.trim(),(r.negative_prompt??'').trim(),r.duration_seconds,...(r.aspect_ratio===undefined?[]:[r.aspect_ratio])]);\n const request=r=>!!r&&valid(r.request_id)&&(r.aspect_ratio===undefined||['9:16','16:9'].includes(r.aspect_ratio))&&typeof r.image==='string'&&/^[A-Za-z0-9][A-Za-z0-9_-]*\\.(png|jpe?g|webp)$/i.test(r.image)&&typeof r.prompt==='string'&&!!r.prompt.trim()&&r.prompt.length<=3000&&typeof(r.negative_prompt??'')==='string'&&[2,4,6,8,10].includes(r.duration_seconds);\n function lookup(id,r){\n  if(!valid(id))return {kind:'invalid'};\n  let reg;try{reg=read(root+'/scheduler/jobs/'+id+'.json');}catch(_){return {kind:'corrupt'};}\n  if(!reg)return {kind:'missing'};\n  if(reg.request_id!==id)return {kind:'conflict',reg};\n  if(reg.cleared_at)return {kind:'cleared',reg};\n  if(['deleted','deleting'].includes(reg.status))return {kind:reg.status,reg};\n  if(r&&reg.fingerprint!==fp(r))return {kind:'conflict',reg};\n  return {kind:'registered',reg};\n }\n function ownsSubmission(state,id){return state.submitting_request_id===id||(!state.submitting_request_id&&state.last_job?.request_id===id&&request(state.last_job.request)&&typeof state.submitting_draft?.prompt==='string'&&fp(state.submitting_draft)===fp(state.last_job.request));}\n function sync(state){\n  state.dispatches??={};\n  const last=state.last_job;\n  if(last&&['claiming','uncertain'].includes(last.status)&&request(last.request)&&!state.dispatches[last.request_id])state.dispatches[last.request_id]={request:last.request,status:last.status,created_at:last.created_at??new Date().toISOString()};\n  for(const [id,e] of Object.entries(state.dispatches)){\n   if(!request(e.request))continue;\n   const found=lookup(id,e.request);\n   if(found.kind==='registered'){\n    e.status=found.reg.status;e.main_execution_id=found.reg.execution_id;e.prompt_id=found.reg.prompt_id??null;\n    if(state.last_job?.request_id===id){state.last_job.status=e.status;state.last_job.main_execution_id=e.main_execution_id;state.last_job.prompt_id=e.prompt_id;}\n    if(ownsSubmission(state,id)){delete state.submitting_draft;delete state.submitting_request_id;}\n   }else if(['deleted','deleting','cleared'].includes(found.kind)){\n    if(ownsSubmission(state,id)){delete state.submitting_draft;delete state.submitting_request_id;}\n    delete state.dispatches[id];if(state.last_job?.request_id===id)state.last_job=null;\n   }else if(found.kind==='conflict'||found.kind==='corrupt')e.status='registration_conflict';\n   else if(['claiming','uncertain','accepted'].includes(e.status))e.status='uncertain';\n  }\n  return state;\n }\n function saved(state,id){\n  if(!valid(id))return null;\n  let e=state.dispatches?.[id];\n  if(!e){const a=read(root+'/jobs/'+id+'.json');if(request(a?.request))e={request:a.request,draft:a.draft,status:'uncertain'};}\n  if(!e&&state.last_job?.request_id===id&&request(state.last_job.request))e={request:state.last_job.request,status:state.last_job.status};\n  return e&&request(e.request)?e:null;\n }\n return {lookup,sync,saved,fp,valid,request,ownsSubmission};\n})();\n\nconst base=$('Handle Telegram Wizard').first().json,result=$input.first().json.dispatch_response??$input.first().json;\nconst id=base.request.request_id;\nconst r=S.tx(()=>{\n let fd;const lock=base.state_path+'.lock-'+RUNTIME;\n try{fd=S.fs.openSync(lock,'wx',0o600);}catch(e){if(e.code==='EEXIST')return {recorded:false};throw e;}\n try{\n  const state=D.sync(S.read(base.state_path,{}));\n  const found=D.lookup(id,base.request);\n  const ack=!result.error&&['accepted','duplicate'].includes(result.status)&&result.request_id===id;\n  const accepted=ack||['registered','cleared'].includes(found.kind);\n  const deleted=['deleted','deleting'].includes(found.kind);\n  const reason=String(result.error?.message??result.error??result.message??('HTTP '+(result.statusCode??result.httpCode??'sem confirmação'))).slice(0,350);\n  const entry={...(state.dispatches?.[id]??{}),request:base.request,status:accepted?(found.reg?.status??'accepted'):'uncertain',updated_at:new Date().toISOString(),error:accepted?null:reason};\n  if(!deleted&&!found.reg?.cleared_at){state.dispatches??={};state.dispatches[id]=entry;}\n  if(state.last_job?.request_id===id&&!deleted){\n   Object.assign(state.last_job,{status:entry.status,main_execution_id:found.reg?.execution_id??result.execution_id??null,prompt_id:found.reg?.prompt_id??result.prompt_id??null});\n   if(accepted&&D.ownsSubmission(state,id)){delete state.submitting_draft;delete state.submitting_request_id;}\n  }\n  S.write(base.state_path,state);\n  let text;\n  if(deleted)text='🗑 Este pedido já foi excluído: '+id+'. Nenhum novo job foi criado.';\n  else if(found.kind==='cleared')text='🧹 Este pedido já foi retirado da listagem: '+id+'. Arquivos preservados; nenhum novo job foi criado.';\n  else if(accepted){\n   const status=found.reg?.status??result.job_status??'registrado';\n   text='✅ Job registrado: '+id+'\\nEstado: '+status+'. Você já pode preparar o próximo. Use /queue ou /status para acompanhar.';\n   if(status==='failed')text+='\\nEste job falhou. Use /retry '+id+' para revisar e solicitar outra geração.';\n  }else text='⚠️ Registro ainda sem confirmação: '+id+'\\nDetalhe: '+reason+'\\nIsso não bloqueia outros vídeos. Use /retry '+id+' para conferir/repetir somente este registro, com o mesmo ID. Não será criado outro ID por acidente.';\n  const escape=s=>String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');\n  return {recorded:true,text:escape(text)};\n }finally{S.fs.closeSync(fd);S.fs.unlinkSync(lock);}\n});\nreturn [{json:{...base,preview:false,recorded:r.recorded===true,...(r.recorded?{}:{dispatch_response:result}),text:r.text}}];\n"
+      },
+      "name": "Record Dispatch Result",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "id": "4b02ff28-1ed4-52e9-ab21-3cdbc1737d30",
+      "position": [
+        16368,
+        15632
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://127.0.0.1:5678/webhook/start",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ $json.request }}",
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "id": "9d45356f-4dea-588c-b59b-d50670f3269b",
+      "name": "Start Video Workflow",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        16144,
+        15632
+      ],
+      "retryOnFail": false,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "74e40baa-94bb-4b43-b196-a4b2e0874bd0",
+              "leftValue": "={{ $json.dispatch }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "name": "Can Dispatch?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "id": "9e6a581b-88ab-59a8-a231-b3ba1ce326df",
+      "position": [
+        15920,
+        15696
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const base=$('Handle Telegram Wizard').first().json;\n// The queue may be occupied: the main workflow now owns admission and scheduling.\nreturn [{json:{...base,dispatch:true,preview:false}}];\n"
+      },
+      "name": "Check Queue and Draft",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "id": "a7a9dddd-8fd6-5ae3-8209-e124b7e8b83e",
+      "position": [
+        15696,
+        15696
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "f5e400eb-ced9-47ea-bcf0-a1b2605a42e6",
+              "leftValue": "={{ $json.route === 'generate' }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "name": "Generate Video?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "id": "c4f448df-7298-5e71-9077-60e45be4c9c1",
+      "position": [
+        15472,
+        15936
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// A dispatch uncertainty belongs to a request, never to the whole chat.\nconst D=(()=>{\n const fs=require('fs'),root='/files/.telegram-ui';\n const valid=id=>typeof id==='string'&&/^tg-0-[0-9]+$/.test(id);\n const read=p=>fs.existsSync(p)?JSON.parse(fs.readFileSync(p,'utf8')):null;\n const fp=r=>JSON.stringify([r.image,r.prompt.trim(),(r.negative_prompt??'').trim(),r.duration_seconds,...(r.aspect_ratio===undefined?[]:[r.aspect_ratio])]);\n const request=r=>!!r&&valid(r.request_id)&&(r.aspect_ratio===undefined||['9:16','16:9'].includes(r.aspect_ratio))&&typeof r.image==='string'&&/^[A-Za-z0-9][A-Za-z0-9_-]*\\.(png|jpe?g|webp)$/i.test(r.image)&&typeof r.prompt==='string'&&!!r.prompt.trim()&&r.prompt.length<=3000&&typeof(r.negative_prompt??'')==='string'&&[2,4,6,8,10].includes(r.duration_seconds);\n function lookup(id,r){\n  if(!valid(id))return {kind:'invalid'};\n  let reg;try{reg=read(root+'/scheduler/jobs/'+id+'.json');}catch(_){return {kind:'corrupt'};}\n  if(!reg)return {kind:'missing'};\n  if(reg.request_id!==id)return {kind:'conflict',reg};\n  if(reg.cleared_at)return {kind:'cleared',reg};\n  if(['deleted','deleting'].includes(reg.status))return {kind:reg.status,reg};\n  if(r&&reg.fingerprint!==fp(r))return {kind:'conflict',reg};\n  return {kind:'registered',reg};\n }\n function ownsSubmission(state,id){return state.submitting_request_id===id||(!state.submitting_request_id&&state.last_job?.request_id===id&&request(state.last_job.request)&&typeof state.submitting_draft?.prompt==='string'&&fp(state.submitting_draft)===fp(state.last_job.request));}\n function sync(state){\n  state.dispatches??={};\n  const last=state.last_job;\n  if(last&&['claiming','uncertain'].includes(last.status)&&request(last.request)&&!state.dispatches[last.request_id])state.dispatches[last.request_id]={request:last.request,status:last.status,created_at:last.created_at??new Date().toISOString()};\n  for(const [id,e] of Object.entries(state.dispatches)){\n   if(!request(e.request))continue;\n   const found=lookup(id,e.request);\n   if(found.kind==='registered'){\n    e.status=found.reg.status;e.main_execution_id=found.reg.execution_id;e.prompt_id=found.reg.prompt_id??null;\n    if(state.last_job?.request_id===id){state.last_job.status=e.status;state.last_job.main_execution_id=e.main_execution_id;state.last_job.prompt_id=e.prompt_id;}\n    if(ownsSubmission(state,id)){delete state.submitting_draft;delete state.submitting_request_id;}\n   }else if(['deleted','deleting','cleared'].includes(found.kind)){\n    if(ownsSubmission(state,id)){delete state.submitting_draft;delete state.submitting_request_id;}\n    delete state.dispatches[id];if(state.last_job?.request_id===id)state.last_job=null;\n   }else if(found.kind==='conflict'||found.kind==='corrupt')e.status='registration_conflict';\n   else if(['claiming','uncertain','accepted'].includes(e.status))e.status='uncertain';\n  }\n  return state;\n }\n function saved(state,id){\n  if(!valid(id))return null;\n  let e=state.dispatches?.[id];\n  if(!e){const a=read(root+'/jobs/'+id+'.json');if(request(a?.request))e={request:a.request,draft:a.draft,status:'uncertain'};}\n  if(!e&&state.last_job?.request_id===id&&request(state.last_job.request))e={request:state.last_job.request,status:state.last_job.status};\n  return e&&request(e.request)?e:null;\n }\n return {lookup,sync,saved,fp,valid,request,ownsSubmission};\n})();\n\n// Docker incarnation: a restart gets a new mutex namespace. Old empty locks are not stolen.\nconst RUNTIME=(()=>{const f=require('fs');try{\n const boot=f.readFileSync('/proc/sys/kernel/random/boot_id','utf8').trim();\n const stat=f.readFileSync('/proc/1/stat','utf8');const fields=stat.slice(stat.lastIndexOf(')')+2).split(' ');\n if(!/^[a-f0-9-]{36}$/.test(boot)||!/^\\d+$/.test(fields[19]))throw Error();return boot+'-'+fields[19];\n}catch(_){throw new Error('Recovery requires the configured Linux Docker container (/proc readable).');}})();\n\n// n8n Code node. Required built-in allowlist: fs. No external modules.\nconst fs = require('fs');\nconst ctx = $input.first().json;\nconst CURRENT = '/files/current';\nconst STATE = '/files/.telegram-ui';\nconst DEFAULT_NEGATIVE = ''; // Configure a preferred default here, if desired.\nconst imageName = /^[A-Za-z0-9][A-Za-z0-9_-]*\\.(png|jpg|jpeg|webp)$/i;\nconst escape = value => String(value ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');\nfs.mkdirSync(STATE, { recursive: true, mode: 0o700 });\nconst statePath = `${STATE}/${ctx.chat_id}-${ctx.user_id}.json`;\nconst lockPath = `${statePath}.lock-${RUNTIME}`;\nlet lock;\ntry { lock = fs.openSync(lockPath, 'wx', 0o600); }\ncatch (e) {\n  if (e.code !== 'EEXIST') throw e;\n  return [{ json: { ...ctx, route: 'reply', preview: false, text: 'Outra mensagem está sendo processada. Tente novamente em alguns segundos. Se persistir após reiniciar o n8n, consulte README: arquivo de lock.', keyboard: { rows: [] } } }];\n}\nlet temp;\ntry {\n  const state = fs.existsSync(statePath) ? JSON.parse(fs.readFileSync(statePath, 'utf8')) : { revision: 0, last_update: -1, draft: null, last_job: null };\n  D.sync(state);\n  const lastSeen = state.last_seen_at ? Date.parse(state.last_seen_at) : Date.now();\n  if (ctx.update_id <= state.last_update && Date.now() - lastSeen < 6 * 24 * 60 * 60 * 1000) return [];\n  state.last_update = ctx.update_id;\n  state.last_seen_at = new Date().toISOString();\n  const previousRevision = state.revision;\n  state.revision += 1;\n  const rev = state.revision;\n  let route = 'reply', preview = false, preview_path = '', text = '', rows = [], request;\n  const button = (label, action, arg = '') => ({ text: label, additionalFields: { callback_data: `v:${rev}:${action}${arg === '' ? '' : ':' + arg}` } });\n  const menuRows = () => [[button('🎬 New Video','new'),button('📝 Resume Draft','resume')],[button('🔁 Retry Last','retry'),button('📋 Queue / Status','status')],[button('🧹 Clear Drafts','clear'),button('🗑 Delete Draft','delete')],[button('🛑 Stop All Jobs','stop'),button('❓ Help','help')],[button('♻️ Recover Queue','recover')]];\n  const nav = () => [[button('📝 Review Draft', 'review'), button('❌ Cancel', 'cancel')]];\n  const main = (prefix = '') => { text = `${prefix ? prefix + '\\n\\n' : ''}<b>🎬 Video Production</b>\\nEscolha uma opção.`; rows = menuRows(); };\n  function statImage(name) {\n    if (typeof name !== 'string' || name.length > 180 || !imageName.test(name)) throw new Error('Nome de imagem inválido. Use letras, números, _ ou -, e extensão png/jpg/jpeg/webp.');\n    const path = `${CURRENT}/${name}`;\n    const info = fs.lstatSync(path);\n    if (!info.isFile() || info.isSymbolicLink()) throw new Error('A imagem deve ser um arquivo comum dentro de current.');\n    if (!info.size) throw new Error('A imagem está vazia ou ainda está sendo enviada.');\n    return { name, path, bytes: info.size, mtime: info.mtimeMs };\n  }\n  function listImages() {\n    state.draft.step = 'image';\n    text = '<b>🖼 Send first frame</b>\\nEnvie uma imagem JPG, PNG ou WebP nesta conversa, até 12 MiB. Prefira anexar como Arquivo para preservar o original.\\n\\nOpcional: use a legenda da imagem como prompt. Também poderá escrever o prompt depois.';\n    rows = [[button('❌ Cancel', 'cancel')]];\n  }\n  function aspect() {\n    state.draft.step = 'aspect';\n    text = '<b>📐 Choose format — 2 MP</b>\\n9:16: 1088×1920\\n16:9: 1920×1088\\n\\nEscolha o formato do vídeo. Envie /cancel para sair.';\n    rows = [[button('📱 9:16', 'aspect', '916'), button('🖥 16:9', 'aspect', '169')]];\n  }\n  function duration() {\n    state.draft.step = 'duration';\n    text = '<b>⏱ Choose duration</b>\\nSelecione a duração do vídeo.';\n    rows = [[2, 4, 6, 8].map(n => button(`${n}s`, 'duration', n)), ...nav()];\n  }\n  function prompt() {\n    state.draft.step = 'prompt';\n    text = '<b>✍️ Video prompt</b>\\nEnvie o prompt em uma mensagem comum, com até 3000 caracteres. Pode usar parágrafos e aspas.';\n    rows = nav();\n  }\n  function negativeOptions() {\n    state.draft.step = 'negative_options';\n    text = '<b>🚫 Negative prompt</b>\\nEscolha uma opção. O padrão inicial está vazio; você pode configurá-lo no node Handle Telegram Wizard.';\n    rows = [[button('Use Default', 'negative_default'), button('Leave Empty', 'negative_empty')], [button('✍️ Write', 'negative_write')], ...nav()];\n  }\n  function review() {\n    const d = state.draft;\n    d.step = 'review';\n    if(d.pending_submission_id)return reviewPending();\n    d.aspect_ratio??='9:16';\n    const short = (s, n) => escape(s.length > n ? s.slice(0, n) + '… [resumo; texto completo preservado]' : s);\n    text = `<b>🎬 Review Draft</b>\\n🖼 ${escape(d.image || 'Não selecionada')}\\n📐 ${escape(d.aspect_ratio)} · 2 MP\\n⏱ ${d.duration_seconds ? d.duration_seconds + 's' : 'Não selecionada'}\\n\\n<b>Prompt</b>\\n${short(d.prompt || 'Não preenchido', 1600)}\\n\\n<b>Negative prompt</b>\\n${short(d.negative_prompt || '(vazio)', 450)}`;\n    rows = [];\n    if (d.image && d.duration_seconds && d.prompt) rows.push([button('🚀 Generate', 'generate'),button('📐 Format', 'edit_aspect')]);\n    else rows.push([button('📐 Format', 'edit_aspect')]);\n    rows.push([button('🖼 Image', 'edit_image'), button('⏱ Duration', 'edit_duration')], [button('✍️ Prompt', 'edit_prompt'), button('🚫 Negative Prompt', 'edit_negative')], [button('🗑 Delete Draft','delete'),button('❌ Cancel', 'cancel')]);\n  }\n  function resume() {\n    if (!state.draft) return main('Nenhum rascunho salvo.');\n    switch (state.draft.step) {\n      case 'image': return listImages(state.draft.page || 0);\n      case 'aspect': return aspect();\n      case 'duration': return duration();\n      case 'prompt': return prompt();\n      case 'negative_options': return negativeOptions();\n      case 'negative_text': text = '<b>✍️ Negative prompt</b>\\nEnvie o texto, com até 1000 caracteres.'; rows = nav(); return;\n      default: return review();\n    }\n  }\n  function chooseImage(name) {\n    const info = statImage(name);\n    Object.assign(state.draft, { image: name, image_bytes: info.bytes, image_mtime: info.mtime });\n    if (info.bytes <= 8 * 1024 * 1024) { preview = true; preview_path = info.path; }\n    if (state.draft.editing) { state.draft.editing = false; review(); } else aspect();\n  }\n  function pendingReview(id,entry) {\n    if(state.draft&&state.draft.pending_submission_id!==id)return main('Há um rascunho aberto. Use /cancel antes de conferir o pedido '+id+'.');\n    const req=entry.request;\n    state.draft={...req,step:'review',editing:false,retry_of:id,pending_submission_id:id};\n    state.dispatches??={};state.dispatches[id]={...entry,status:'uncertain'};\n    review();\n  }\n  function reviewPending() {\n    const id=state.draft.pending_submission_id,entry=D.saved(state,id);\n    if(!entry)throw new Error('Os dados originais deste envio não estão disponíveis.');\n    text='<b>♻️ Conferir envio sem confirmação</b>\\n'+escape(id)+'\\n\\nUsarei o mesmo ID e os parâmetros originais. Se o pedido já estiver registrado, o servidor devolve o registro existente. Outros vídeos continuam liberados.\\n\\nPara iniciar outro vídeo, use /cancel e /generate.';\n    rows=[[button('♻️ Check / Resend','generate'),button('🗑 Delete Request','delete')]];\n  }\n\n  function retryRejected(requestedId = '') {\n    const id=requestedId || state.rejected_draft?.request_id || state.last_job?.request_id;\n    if(!id)return main('Nenhum envio salvo para recuperar.');\n    if(!new RegExp(`^tg-${ctx.chat_id}-[0-9]+$`).test(id))throw new Error('Use /retry seguido do request_id completo de um job deste bot.');\n    if(state.draft){\n      if(state.draft.retry_of===id)return resume();\n      return main('Há outro rascunho ativo. Use /draft para revisá-lo ou /cancel antes de /retry '+id+'.');\n    }\n    const registryPath=`${STATE}/scheduler/jobs/${id}.json`;\n    const registry=fs.existsSync(registryPath)?JSON.parse(fs.readFileSync(registryPath,'utf8')):null;\n    if(registry?.cleared_at||['deleted','deleting'].includes(registry?.status))throw new Error('Este rascunho foi limpo ou excluído e não pode ser recuperado.');\n    if(registry&&['registered','waiting_generation','generation_submitting','generating','awaiting_review','waiting_postprocess','postprocess_waiting_for_idle','interpolating','upscaling','recovering','recovery_pending'].includes(registry.status))return main('Este pedido já está registrado: '+id+' ('+registry.status+'). Consulte /queue. Se o processamento ficou parado, use /recover; não é necessário criar outra geração.');\n    if(!registry){\n      const pending=D.saved(state,id);\n      if(pending)return pendingReview(id,pending);\n    }\n    const path=`${STATE}/jobs/${id}.json`;\n    let saved=fs.existsSync(path)?JSON.parse(fs.readFileSync(path,'utf8')):null;\n    if(!saved&&registry?.request)saved={request:registry.request};\n    if(!saved&&state.last_job?.request_id===id)saved={request:state.last_job.request};\n    if(registry?.request)saved={...saved,request:registry.request};\n    const req=saved?.request;\n    if(!req||req.request_id!==id||typeof req.image!=='string'||req.image.length>180||!imageName.test(req.image)||![2,4,6,8,10].includes(req.duration_seconds)||typeof req.prompt!=='string'||!req.prompt.trim()||req.prompt.length>3000)throw new Error('Não encontrei parâmetros válidos para '+id+'.');\n    const prior=registry?.retry_snapshot || (state.rejected_draft?.request_id===id?state.rejected_draft.draft:null) || saved.draft;\n    const draft=prior?JSON.parse(JSON.stringify(prior)):{};\n    Object.assign(draft,{...(req.aspect_ratio===undefined?{}:{aspect_ratio:req.aspect_ratio}),image:req.image,duration_seconds:req.duration_seconds,prompt:req.prompt,negative_prompt:req.negative_prompt??'',step:'review',editing:false,retry_of:id});\n    delete draft.files;delete draft.page;\n    let available=false;\n    try{const info=statImage(req.image);available=draft.image_bytes===undefined||(draft.image_bytes===info.bytes&&draft.image_mtime===info.mtime);\n      if(available){draft.image_bytes=info.bytes;draft.image_mtime=info.mtime;}\n    }catch(_){}\n    if(!available){draft.image='';draft.step='image';delete draft.image_bytes;delete draft.image_mtime;}\n    if(registry?.status==='rejected'||state.rejected_draft?.request_id===id){state.draft=draft;resume();return;}\n    state.retry_candidate={request_id:id,draft};\n    text=`<b>🔁 Recover submission?</b>\\nJob: ${escape(id)}\\nEstado: ${escape(registry?.status??'sem rejeição registrada')}\\nDuração: ${req.duration_seconds}s\\nConfirme a recuperação dos parâmetros. Isso não cancela o job anterior nem inicia uma geração.${available?'':'\\nSerá necessário reenviar o first frame.'}`;\n    rows=[[button('📝 Recover Draft','recover_last'),button('Cancel','cancel_retry')]];\n  }\n  function recoverLastSubmission() {\n    if(!state.retry_candidate)return main('Nenhuma recuperação pendente. Use /retry REQUEST_ID.');\n    if(state.draft)return main('Há outro rascunho ativo. Use /draft ou /cancel antes de recuperar.');\n    state.draft=JSON.parse(JSON.stringify(state.retry_candidate.draft));delete state.retry_candidate;\n    resume();text='Parâmetros recuperados. Confira antes de Generate.\\n\\n'+text;\n  }\n  function requestControl(kind) {\n    if(kind==='delete'&&!state.draft)throw new Error('Abra o rascunho com /draft ou /retry REQUEST_ID antes de /delete.');\n    state.control_action={kind,action_id:`${ctx.update_id}`,draft:kind==='delete'?JSON.parse(JSON.stringify(state.draft)):null};\n    route='control';text='Processando /'+kind+'…';rows=[];\n  }\n\n  function startNew() {\n    if (state.draft) {\n      text = 'Você já tem um rascunho. Continue ou descarte antes de criar outro.';\n      rows = [[button('📝 Resume Draft', 'resume'), button('❌ Discard Draft', 'cancel')]];\n      return;\n    }\n    state.draft = { step: 'image', prompt: '', negative_prompt: '', created_at: new Date().toISOString() };\n    listImages(0, true);\n  }\n  function beginDispatch() {\n    if(fs.existsSync(STATE+'/scheduler/control.json')&&JSON.parse(fs.readFileSync(STATE+'/scheduler/control.json','utf8')).stop_pending)throw new Error('Aguarde a confirmação de /stop antes de gerar.');\n    const d = state.draft;\n    if(d?.pending_submission_id){\n      const entry=D.saved(state,d.pending_submission_id),found=D.lookup(d.pending_submission_id,entry?.request);\n      if(!entry||['invalid','conflict','corrupt','deleted','deleting','cleared'].includes(found.kind))throw new Error('Não é seguro reenviar este registro. Confira /status; os outros vídeos permanecem liberados.');\n      request={...entry.request};state.dispatches??={};state.dispatches[request.request_id]={...entry,status:'claiming'};\n      state.last_job={request_id:request.request_id,status:'claiming',created_at:new Date().toISOString(),request};\n      state.submitting_draft=JSON.parse(JSON.stringify(d));state.submitting_request_id=request.request_id;\n      state.draft=null;route='generate';text='Conferindo o registro original…';rows=menuRows();return;\n    }\n    if (!d || ![2, 4, 6, 8].includes(d.duration_seconds) || !d.prompt?.trim() || d.prompt.length > 3000 || typeof d.negative_prompt !== 'string' || d.negative_prompt.length > 1000) throw new Error('Complete imagem, duração e prompt antes de gerar.');\n    d.aspect_ratio??='9:16';\n    if(!['9:16','16:9'].includes(d.aspect_ratio))throw new Error('Escolha 9:16 ou 16:9.');\n    const info = statImage(d.image);\n    if (info.bytes !== d.image_bytes || info.mtime !== d.image_mtime) throw new Error('A imagem mudou desde a seleção. Selecione-a novamente para conferir.');\n    // Freeze a per-job copy. Reusing a first frame must never share deletion ownership.\n    const jobId = `tg-${ctx.chat_id}-${ctx.update_id}`;\n    const jobImage = jobId + '.' + d.image.split('.').pop().toLowerCase();\n    const jobImagePath = `${CURRENT}/${jobImage}`;\n    if (fs.existsSync(jobImagePath)) {\n      const existing = statImage(jobImage);\n      if (existing.bytes !== info.bytes || !fs.readFileSync(existing.path).equals(fs.readFileSync(info.path))) throw new Error('Já existe outra imagem para este job. Nada foi sobrescrito.');\n    } else fs.copyFileSync(info.path, jobImagePath, fs.constants.COPYFILE_EXCL);\n    const frozen = statImage(jobImage);\n    d.image=jobImage;d.image_bytes=frozen.bytes;d.image_mtime=frozen.mtime;\n    request = { request_id: jobId, aspect_ratio:d.aspect_ratio, image: d.image, duration_seconds: d.duration_seconds, prompt: d.prompt.trim(), negative_prompt: d.negative_prompt };\n    state.last_job = { request_id: request.request_id, status: 'claiming', created_at: new Date().toISOString(), request };\n    state.dispatches??={};state.dispatches[request.request_id]={request,status:'claiming',created_at:new Date().toISOString()};\n    state.submitting_request_id=request.request_id;\n    state.submitting_draft = JSON.parse(JSON.stringify(d));\n    fs.mkdirSync(`${STATE}/jobs`,{recursive:true,mode:0o700});\n    const archivePath = `${STATE}/jobs/${request.request_id}.json`;\n    if (!fs.existsSync(archivePath)) fs.writeFileSync(archivePath,JSON.stringify({request, draft:state.submitting_draft, chat_id:ctx.chat_id, user_id:ctx.user_id}),{flag:'wx',mode:0o600});\n    state.draft = null;\n    route = 'generate'; text = 'Preparando envio…'; rows = menuRows();\n  }\n  let action = '', arg = '';\n  try {\n    if (ctx.upload_error) throw new Error(ctx.upload_error);\n    if (ctx.uploaded_image) {\n      if (!state.draft) startNew();\n      if (!state.draft || state.draft.step !== 'image') throw new Error('Use /draft → Image antes de trocar o first frame.');\n      if (ctx.caption?.trim() && !state.draft.editing) state.draft.prompt = ctx.caption.trim();\n      chooseImage(ctx.uploaded_image);\n    } else if (ctx.callback_id) {\n      const parts = /^v:(\\d+):([a-z_]+)(?::([0-9]+))?$/.exec(ctx.callback_data || '');\n      if (!parts || Number(parts[1]) !== previousRevision) {\n        main('Este botão pertence a uma etapa anterior. Use Resume Draft para continuar.');\n      } else {\n        action = parts[2]; arg = parts[3] || '';\n        const draftActions = new Set(['aspect','edit_aspect','duration', 'negative_default', 'negative_empty', 'negative_write', 'review', 'edit_image', 'edit_duration', 'edit_prompt', 'edit_negative', 'generate']);\n        if (draftActions.has(action) && !state.draft) throw new Error('Nenhum rascunho ativo. Inicie um novo vídeo.');\n        switch (action) {\n          case 'new': startNew(); break;\n          case 'clear': requestControl('clear'); break;\n          case 'recover': requestControl('recover'); break;\n          case 'stop': requestControl('stop'); break;\n          case 'delete': requestControl('delete'); break;\n          case 'resume': resume(); break;\n          case 'retry': retryRejected(); break;\n          case 'recover_last': recoverLastSubmission(); break;\n          case 'cancel_retry': delete state.retry_candidate; main('Recuperação cancelada.'); break;\n          case 'cancel': state.draft = null; delete state.retry_candidate; main('Edição encerrada. O histórico do job permanece. Use /clear para limpar rascunhos ou /retry REQUEST_ID e /delete para excluir um rejeitado.'); break;\n          case 'edit_aspect': state.draft.editing = true; aspect(); break;\n          case 'aspect': {\n            const ratio = {'916':'9:16','169':'16:9'}[arg];\n            if (!ratio) throw new Error('Formato inválido.');\n            state.draft.aspect_ratio = ratio;\n            if (state.draft.editing) { state.draft.editing = false; review(); } else duration();\n            break;\n          }\n          case 'duration': {\n            const n = Number(arg); if (![2, 4, 6, 8].includes(n)) throw new Error('Duração inválida.');\n            state.draft.duration_seconds = n;\n            if (state.draft.editing) { state.draft.editing = false; review(); } else if (state.draft.prompt) negativeOptions(); else prompt();\n            break;\n          }\n          case 'negative_default': state.draft.negative_prompt = DEFAULT_NEGATIVE; review(); break;\n          case 'negative_empty': state.draft.negative_prompt = ''; review(); break;\n          case 'negative_write': state.draft.step = 'negative_text'; resume(); break;\n          case 'review': review(); break;\n          case 'edit_image': state.draft.editing = true; listImages(0, true); break;\n          case 'edit_duration': state.draft.editing = true; duration(); break;\n          case 'edit_prompt': state.draft.editing = true; prompt(); break;\n          case 'edit_negative': state.draft.editing = true; negativeOptions(); break;\n          case 'generate': if (state.draft.step !== 'review') throw new Error('Revise o rascunho antes de gerar.'); beginDispatch(); break;\n          case 'queue': route = 'status'; break;\n          case 'status': route = 'status'; break;\n          case 'help': action = 'help'; break;\n          default: throw new Error('Ação desconhecida. Use /start.');\n        }\n      }\n    } else {\n      const message = String(ctx.text || '');\n      const command = /^\\/([a-z]+)(?:@[A-Za-z0-9_]+)?(?:\\s+([\\s\\S]*))?$/.exec(message);\n      if (command) {\n        action = command[1];\n        switch (action) {\n          case 'menu':\n          case 'start': main(); break;\n          case 'generate':\n            if (command[2]?.trim()) throw new Error('Agora /generate abre o assistente. Envie o comando sozinho, sem JSON.');\n            startNew(); break;\n          case 'draft': resume(); break;\n          case 'clear': requestControl('clear'); break;\n          case 'delete': requestControl('delete'); break;\n          case 'recover': requestControl('recover'); break;\n          case 'stop': requestControl('stop'); break;\n          case 'retry': retryRejected(command[2]?.trim() || ''); break;\n          case 'cancel': state.draft = null; delete state.retry_candidate; main('Edição encerrada. O histórico do job permanece. Use /clear para limpar rascunhos ou /retry REQUEST_ID e /delete para excluir um rejeitado.'); break;\n          case 'queue': route = 'status'; break;\n          case 'status': route = 'status'; break;\n          case 'help': break;\n          default: main('Comando desconhecido.');\n        }\n      } else if (state.draft) {\n        const d = state.draft;\n        switch (d.step) {\n          case 'image': listImages(); text = 'Envie o arquivo de imagem, não o nome.\\n\\n' + text; break;\n          case 'prompt':\n            if (!message.trim() || message.length > 3000) throw new Error('Envie um prompt de 1 a 3000 caracteres.');\n            d.prompt = message.trim();\n            if (d.editing) { d.editing = false; review(); } else negativeOptions();\n            break;\n          case 'negative_text':\n            if (message.length > 1000) throw new Error('Negative prompt: máximo de 1000 caracteres.');\n            d.negative_prompt = message.trim(); d.editing = false; review(); break;\n          default: resume(); text = 'Use os botões desta etapa.\\n\\n' + text;\n        }\n      } else main('Use New Video ou envie o first frame para iniciar.');\n    }\n    if (action === 'help') {\n      text = \"<b>❓ Help — Video Production</b>\\n\\n<b>Criar e acompanhar</b>\\n/generate — iniciar um vídeo: envie o first frame, escolha 9:16 ou 16:9 (sempre 2 MP), escolha a duração, preencha os prompts e toque em Generate.\\n/start ou /menu — abrir o menu principal.\\n/draft — continuar o rascunho atual.\\n/retry REQUEST_ID — recuperar os parâmetros de um job específico. Para um envio sem confirmação, confere/reenvia o mesmo ID, sem bloquear outros vídeos. Sem ID, tenta recuperar o último rejeitado/envio salvo.\\n/queue ou /status — consultar os jobs e a fila do Comfy.\\n\\n<b>Limpar, cancelar e excluir</b>\\n/cancel — fechar a edição atual; mantém histórico e arquivos do job.\\n/clear — limpar rascunhos e retirar todos os jobs encerrados da listagem, inclusive finalizados. Preserva os arquivos de vídeo e os jobs ativos.\\n/delete — excluir o rascunho aberto e seus arquivos exclusivos. Para escolher um rejeitado, use /retry REQUEST_ID antes. Imagens usadas por outros jobs e a pasta final são preservadas. A exclusão de um job exige Comfy sem tarefas.\\n/recover — recuperar a fila e liberar reservas órfãs; a verificação automática também roda após reiniciar Comfy/Docker.\\n/stop — cancelar todos os jobs abertos, limpar a fila inteira do Comfy e interromper o processamento. Também impede próximas etapas e aprovações antigas desses jobs. Preserva arquivos. Aguarde a confirmação antes de gerar novamente.\\n\\n<b>Fluxo</b>\\nGeração LTX → prévia → sua aprovação → interpolação → upscale → pasta final → aviso de conclusão.\\nVocê pode enfileirar vários vídeos. Se rejeitar, ajuste por /draft ou /retry REQUEST_ID e confirme uma nova geração.\\n\\nEnvie uma imagem por mensagem, JPG/PNG/WebP até 12 MiB. Prefira Arquivo para preservar a qualidade. A legenda pode ser usada como prompt.\";\n      rows = menuRows();\n    }\n    if (route === 'status') {\n      const job = state.last_job;\n      text = '<b>📊 Status</b>\\n' + (job ? `Último envio: ${escape(job.request_id)}\\nEstado do envio: ${escape(job.status)}\\n${job.prompt_id ? 'Prompt ID LTX: ' + escape(job.prompt_id) + '\\n' : ''}` : 'Nenhum envio registrado por esta interface.\\n') + `Rascunho salvo: ${state.draft ? 'sim' : 'não'}.\\n\\nO estado do envio não confirma a conclusão do vídeo. Use as notificações do workflow para acompanhar aprovação e finalização.`;\n      rows = menuRows();\n    }\n  } catch (e) {\n    route = 'reply'; preview = false;\n    const detail = e.code === 'ENOENT' ? 'Arquivo ou pasta não encontrado. Confira o bind mount /files/current e atualize a lista.' : String(e.message || 'Falha ao processar esta etapa.');\n    text = '<b>⚠️ Não foi possível continuar</b>\\n' + escape(detail);\n    rows = menuRows();\n  }\n  temp = `${statePath}.tmp-${ctx.update_id}`;\n  fs.writeFileSync(temp, JSON.stringify(state), { mode: 0o600 });\n  fs.renameSync(temp, statePath); temp = null;\n  return [{ json: { ...ctx, route, preview, preview_path, text, keyboard: { rows: rows.map(buttons => ({ row: { buttons } })) }, request, state_path: statePath } }];\n} finally {\n  if (temp && fs.existsSync(temp)) fs.unlinkSync(temp);\n  fs.closeSync(lock); fs.unlinkSync(lockPath);\n}"
+      },
+      "name": "Handle Telegram Wizard",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "id": "5e2c3c1b-0062-5b95-94e2-8647793247da",
+      "position": [
+        13904,
+        15456
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{json:$('Authorize Telegram Update').first().json}];"
+      },
+      "name": "Restore Button Context",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "id": "bf0b4138-1960-5929-9334-d48e8ec16519",
+      "position": [
+        13680,
+        15536
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "callback",
+        "queryId": "={{ $json.callback_id }}",
+        "additionalFields": {}
+      },
+      "name": "Answer Button Click",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "id": "90219b7c-068e-518c-b84e-c6d9b50d05b7",
+      "position": [
+        13456,
+        15536
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "5c3de92c-f9fc-481c-af75-bf9f57202985",
+              "leftValue": "={{ Boolean($json.callback_id) }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "name": "Is Button Click?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "id": "d6b34985-cd7e-5fdd-b3d7-95e4c4f97ef3",
+      "position": [
+        13232,
+        15600
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const fs = require('fs');\nconst ctx = $('Prepare First Frame Upload').first().json;\ntry {\n  if ($input.first().json.error) throw new Error('O download pelo Telegram falhou. Envie a imagem novamente.');\n  const bytes = await this.helpers.getBinaryDataBuffer(0, 'data');\n  if (!bytes.length || bytes.length > 12*1024*1024) throw new Error('Imagem vazia ou maior que 12 MiB.');\n  let ext;\n  if (bytes[0]===255 && bytes[1]===216 && bytes[2]===255) ext='jpg';\n  else if ([137,80,78,71,13,10,26,10].every((v,i)=>bytes[i]===v)) ext='png';\n  else if (bytes.subarray(0,4).toString()==='RIFF' && bytes.subarray(8,12).toString()==='WEBP') ext='webp';\n  else throw new Error('O arquivo recebido não tem assinatura de JPG, PNG ou WebP.');\n  const filename = `tg-${ctx.chat_id}-${ctx.update_id}.${ext}`;\n  fs.mkdirSync('/files/current',{recursive:true});\n  const path='/files/current/'+filename;\n  if (fs.existsSync(path)) {\n    const info=fs.lstatSync(path);\n    if (!info.isFile() || info.isSymbolicLink() || !fs.readFileSync(path).equals(bytes)) throw new Error('Já existe outro arquivo para esse envio. Envie uma nova mensagem com a imagem.');\n  } else fs.writeFileSync(path,bytes,{flag:'wx',mode:0o600});\n  return [{json:{...ctx,uploaded_image:filename,file:null,upload_error:''}}];\n} catch(e) {\n  return [{json:{...ctx,file:null,upload_error:'Não foi possível receber o first frame: '+String(e.message)}}];\n}\n"
+      },
+      "name": "Save First Frame",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "id": "361b7dda-33fc-5d3c-b3b7-3110a683728b",
+      "position": [
+        13680,
+        15248
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "file",
+        "fileId": "={{ $json.file.file_id }}",
+        "additionalFields": {}
+      },
+      "name": "Download First Frame",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "id": "7ed31652-d8c8-5130-85fd-1ae2c176fc31",
+      "position": [
+        13456,
+        15248
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "32d4a069-e66a-4193-956b-8127e515b1da",
+              "leftValue": "={{ $json.download_allowed }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "name": "Download Allowed?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "id": "a7631d1b-6397-5d5c-ae5b-c4d8a284232a",
+      "position": [
+        13232,
+        15312
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const fs = require('fs');\nconst ctx = $input.first().json;\nconst statePath = `/files/.telegram-ui/${ctx.chat_id}-${ctx.user_id}.json`;\nconst state = fs.existsSync(statePath) ? JSON.parse(fs.readFileSync(statePath,'utf8')) : {};\nlet upload_error = '';\nif (state.draft && state.draft.step !== 'image') upload_error = 'Para trocar o first frame, use /draft → Image e depois envie a imagem.';\nif (upload_error) return [{json:{...ctx,file:null,upload_error,download_allowed:false}}];\nreturn [{json:{...ctx,download_allowed:true}}];\n"
+      },
+      "name": "Prepare First Frame Upload",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "id": "7ee9202a-0e6b-5f19-a90b-8eca34a88268",
+      "position": [
+        13008,
+        15312
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "ea865df7-373d-4489-ac72-7ec925497fba",
+              "leftValue": "={{ Boolean($json.file) }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "name": "Has First Frame?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "id": "6a7e9906-7434-56dd-b827-3e3cd55b7456",
+      "position": [
+        12784,
+        15456
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const ALLOWED_CHAT_ID = '0';\nconst ALLOWED_USER_ID = '0';\nconst event = $input.first().json;\nconst cb = event.callback_query;\nconst message = cb ? cb.message : event.message;\nconst from = cb ? cb.from : message?.from;\nif (!message || message.chat?.type !== 'private' || from?.is_bot ||\n    String(message.chat.id) !== ALLOWED_CHAT_ID || String(from?.id) !== ALLOWED_USER_ID ||\n    !Number.isSafeInteger(event.update_id) || event.update_id < 0) return [];\nif (cb && (typeof cb.id !== 'string' || typeof cb.data !== 'string' || cb.data.length > 64)) return [];\nlet file = null, upload_error = '';\nconst caption = typeof message.caption === 'string' ? message.caption : '';\nif (!cb && (message.document || message.photo?.length)) {\n  if (message.media_group_id) upload_error = 'Envie uma única imagem por mensagem, sem álbum.';\n  else if (message.document) {\n    const d = message.document;\n    const ext = /\\.(jpe?g|png|webp)$/i.exec(d.file_name || '')?.[1]?.toLowerCase();\n    const byMime = { 'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp' };\n    const extension = byMime[d.mime_type] || (ext === 'jpeg' ? 'jpg' : ext);\n    if (!extension) upload_error = 'Envie uma imagem JPG, PNG ou WebP como arquivo.';\n    else file = { file_id: d.file_id, extension, file_size: d.file_size, original_name: d.file_name || '' };\n  } else {\n    const p = [...message.photo].sort((a,b) => b.width*b.height - a.width*a.height)[0];\n    file = { file_id: p.file_id, extension: 'jpg', file_size: p.file_size, original_name: 'Telegram photo' };\n  }\n  if (file && (typeof file.file_id !== 'string' || file.file_size > 12*1024*1024)) {\n    file = null; upload_error = 'Envie uma imagem de até 12 MiB.';\n  }\n  if (caption.length > 3000) { file = null; upload_error = 'A legenda usada como prompt deve ter até 3000 caracteres.'; }\n}\nif (!cb && typeof message.text !== 'string' && !file && !upload_error) return [];\nreturn [{ json: { chat_id: ALLOWED_CHAT_ID, user_id: ALLOWED_USER_ID, update_id: event.update_id,\n  callback_id: cb?.id || '', callback_data: cb?.data || '', text: message.text || '',\n  message_id: message.message_id, file, caption, upload_error } }];\n"
+      },
+      "name": "Authorize Telegram Update",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "id": "e72d92ad-8da0-52e4-9204-97552dfeb2b3",
+      "position": [
+        12560,
+        15456
+      ]
+    },
+    {
+      "parameters": {
+        "updates": [
+          "message",
+          "callback_query"
+        ],
+        "additionalFields": {
+          "download": false
+        }
+      },
+      "id": "191d2d1c-1dae-54ce-a5eb-9986823cf8c0",
+      "name": "Telegram Trigger",
+      "type": "n8n-nodes-base.telegramTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        12336,
+        15456
+      ]
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json.chat_id }}",
+        "text": "={{ $json.text }}",
+        "replyMarkup": "inlineKeyboard",
+        "inlineKeyboard": {
+          "rows": [
+            {
+              "row": {
+                "buttons": [
+                  {
+                    "text": "={{ $json.keyboard.rows[0].row.buttons[0].text }}",
+                    "additionalFields": {
+                      "callback_data": "={{ $json.keyboard.rows[0].row.buttons[0].additionalFields.callback_data }}"
+                    }
+                  },
+                  {
+                    "text": "={{ $json.keyboard.rows[0].row.buttons[1].text }}",
+                    "additionalFields": {
+                      "callback_data": "={{ $json.keyboard.rows[0].row.buttons[1].additionalFields.callback_data }}"
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "row": {
+                "buttons": [
+                  {
+                    "text": "={{ $json.keyboard.rows[1].row.buttons[0].text }}",
+                    "additionalFields": {
+                      "callback_data": "={{ $json.keyboard.rows[1].row.buttons[0].additionalFields.callback_data }}"
+                    }
+                  },
+                  {
+                    "text": "={{ $json.keyboard.rows[1].row.buttons[1].text }}",
+                    "additionalFields": {
+                      "callback_data": "={{ $json.keyboard.rows[1].row.buttons[1].additionalFields.callback_data }}"
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "row": {
+                "buttons": [
+                  {
+                    "text": "={{ $json.keyboard.rows[2].row.buttons[0].text }}",
+                    "additionalFields": {
+                      "callback_data": "={{ $json.keyboard.rows[2].row.buttons[0].additionalFields.callback_data }}"
+                    }
+                  },
+                  {
+                    "text": "={{ $json.keyboard.rows[2].row.buttons[1].text }}",
+                    "additionalFields": {
+                      "callback_data": "={{ $json.keyboard.rows[2].row.buttons[1].additionalFields.callback_data }}"
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "row": {
+                "buttons": [
+                  {
+                    "text": "={{ $json.keyboard.rows[3].row.buttons[0].text }}",
+                    "additionalFields": {
+                      "callback_data": "={{ $json.keyboard.rows[3].row.buttons[0].additionalFields.callback_data }}"
+                    }
+                  },
+                  {
+                    "text": "={{ $json.keyboard.rows[3].row.buttons[1].text }}",
+                    "additionalFields": {
+                      "callback_data": "={{ $json.keyboard.rows[3].row.buttons[1].additionalFields.callback_data }}"
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        "additionalFields": {
+          "appendAttribution": false,
+          "parse_mode": "HTML"
+        }
+      },
+      "name": "Send Native Keyboard 08",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "id": "582108e2-ce85-5cd6-b950-d224c6b5be39",
+      "position": [
+        17040,
+        16032
+      ],
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1500
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json.chat_id }}",
+        "text": "={{ $json.text }}",
+        "replyMarkup": "inlineKeyboard",
+        "inlineKeyboard": {
+          "rows": [
+            {
+              "row": {
+                "buttons": [
+                  {
+                    "text": "={{ $json.keyboard.rows[0].row.buttons[0].text }}",
+                    "additionalFields": {
+                      "callback_data": "={{ $json.keyboard.rows[0].row.buttons[0].additionalFields.callback_data }}"
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "row": {
+                "buttons": [
+                  {
+                    "text": "={{ $json.keyboard.rows[1].row.buttons[0].text }}",
+                    "additionalFields": {
+                      "callback_data": "={{ $json.keyboard.rows[1].row.buttons[0].additionalFields.callback_data }}"
+                    }
+                  },
+                  {
+                    "text": "={{ $json.keyboard.rows[1].row.buttons[1].text }}",
+                    "additionalFields": {
+                      "callback_data": "={{ $json.keyboard.rows[1].row.buttons[1].additionalFields.callback_data }}"
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "row": {
+                "buttons": [
+                  {
+                    "text": "={{ $json.keyboard.rows[2].row.buttons[0].text }}",
+                    "additionalFields": {
+                      "callback_data": "={{ $json.keyboard.rows[2].row.buttons[0].additionalFields.callback_data }}"
+                    }
+                  },
+                  {
+                    "text": "={{ $json.keyboard.rows[2].row.buttons[1].text }}",
+                    "additionalFields": {
+                      "callback_data": "={{ $json.keyboard.rows[2].row.buttons[1].additionalFields.callback_data }}"
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "row": {
+                "buttons": [
+                  {
+                    "text": "={{ $json.keyboard.rows[3].row.buttons[0].text }}",
+                    "additionalFields": {
+                      "callback_data": "={{ $json.keyboard.rows[3].row.buttons[0].additionalFields.callback_data }}"
+                    }
+                  },
+                  {
+                    "text": "={{ $json.keyboard.rows[3].row.buttons[1].text }}",
+                    "additionalFields": {
+                      "callback_data": "={{ $json.keyboard.rows[3].row.buttons[1].additionalFields.callback_data }}"
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        "additionalFields": {
+          "appendAttribution": false,
+          "parse_mode": "HTML"
+        }
+      },
+      "name": "Send Native Keyboard 09",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "id": "f4d57da2-dc22-5dfb-9ebe-5e132cf7d394",
+      "position": [
+        17040,
+        16416
+      ],
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1500
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "c7fcbc7f-1403-4a78-b1d4-e2222cf0ce94",
+              "leftValue": "={{ $json.route === \"control\" }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "fea096ca-c0cd-575e-88b1-eee9e22377f0",
+      "name": "Bot Control Requested?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        14128,
+        15456
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// A dispatch uncertainty belongs to a request, never to the whole chat.\nconst D=(()=>{\n const fs=require('fs'),root='/files/.telegram-ui';\n const valid=id=>typeof id==='string'&&/^tg-0-[0-9]+$/.test(id);\n const read=p=>fs.existsSync(p)?JSON.parse(fs.readFileSync(p,'utf8')):null;\n const fp=r=>JSON.stringify([r.image,r.prompt.trim(),(r.negative_prompt??'').trim(),r.duration_seconds,...(r.aspect_ratio===undefined?[]:[r.aspect_ratio])]);\n const request=r=>!!r&&valid(r.request_id)&&(r.aspect_ratio===undefined||['9:16','16:9'].includes(r.aspect_ratio))&&typeof r.image==='string'&&/^[A-Za-z0-9][A-Za-z0-9_-]*\\.(png|jpe?g|webp)$/i.test(r.image)&&typeof r.prompt==='string'&&!!r.prompt.trim()&&r.prompt.length<=3000&&typeof(r.negative_prompt??'')==='string'&&[2,4,6,8,10].includes(r.duration_seconds);\n function lookup(id,r){\n  if(!valid(id))return {kind:'invalid'};\n  let reg;try{reg=read(root+'/scheduler/jobs/'+id+'.json');}catch(_){return {kind:'corrupt'};}\n  if(!reg)return {kind:'missing'};\n  if(reg.request_id!==id)return {kind:'conflict',reg};\n  if(reg.cleared_at)return {kind:'cleared',reg};\n  if(['deleted','deleting'].includes(reg.status))return {kind:reg.status,reg};\n  if(r&&reg.fingerprint!==fp(r))return {kind:'conflict',reg};\n  return {kind:'registered',reg};\n }\n function ownsSubmission(state,id){return state.submitting_request_id===id||(!state.submitting_request_id&&state.last_job?.request_id===id&&request(state.last_job.request)&&typeof state.submitting_draft?.prompt==='string'&&fp(state.submitting_draft)===fp(state.last_job.request));}\n function sync(state){\n  state.dispatches??={};\n  const last=state.last_job;\n  if(last&&['claiming','uncertain'].includes(last.status)&&request(last.request)&&!state.dispatches[last.request_id])state.dispatches[last.request_id]={request:last.request,status:last.status,created_at:last.created_at??new Date().toISOString()};\n  for(const [id,e] of Object.entries(state.dispatches)){\n   if(!request(e.request))continue;\n   const found=lookup(id,e.request);\n   if(found.kind==='registered'){\n    e.status=found.reg.status;e.main_execution_id=found.reg.execution_id;e.prompt_id=found.reg.prompt_id??null;\n    if(state.last_job?.request_id===id){state.last_job.status=e.status;state.last_job.main_execution_id=e.main_execution_id;state.last_job.prompt_id=e.prompt_id;}\n    if(ownsSubmission(state,id)){delete state.submitting_draft;delete state.submitting_request_id;delete state.submitting_request_id;}\n   }else if(['deleted','deleting','cleared'].includes(found.kind)){\n    if(ownsSubmission(state,id)){delete state.submitting_draft;delete state.submitting_request_id;delete state.submitting_request_id;}\n    delete state.dispatches[id];if(state.last_job?.request_id===id)state.last_job=null;\n   }else if(found.kind==='conflict'||found.kind==='corrupt')e.status='registration_conflict';\n   else if(['claiming','uncertain','accepted'].includes(e.status))e.status='uncertain';\n  }\n  return state;\n }\n function saved(state,id){\n  if(!valid(id))return null;\n  let e=state.dispatches?.[id];\n  if(!e){const a=read(root+'/jobs/'+id+'.json');if(request(a?.request))e={request:a.request,draft:a.draft,status:'uncertain'};}\n  if(!e&&state.last_job?.request_id===id&&request(state.last_job.request))e={request:state.last_job.request,status:state.last_job.status};\n  return e&&request(e.request)?e:null;\n }\n return {lookup,sync,saved,fp,valid,request,ownsSubmission};\n})();\n\n// Docker incarnation: a restart gets a new mutex namespace. Old empty locks are not stolen.\nconst RUNTIME=(()=>{const f=require('fs');try{\n const boot=f.readFileSync('/proc/sys/kernel/random/boot_id','utf8').trim();\n const stat=f.readFileSync('/proc/1/stat','utf8');const fields=stat.slice(stat.lastIndexOf(')')+2).split(' ');\n if(!/^[a-f0-9-]{36}$/.test(boot)||!/^\\d+$/.test(fields[19]))throw Error();return boot+'-'+fields[19];\n}catch(_){throw new Error('Recovery requires the configured Linux Docker container (/proc readable).');}})();\n\n// Shared, embedded in Code nodes. Requires only built-in fs and shared /files.\nconst S = (() => {\n  const fs=require('fs');\n  const root='/files/.telegram-ui/scheduler', jobs=root+'/jobs', control=root+'/control.json';\n  fs.mkdirSync(jobs,{recursive:true,mode:0o700});\n  const execution=String($execution.id);\n  const valid=id=>typeof id==='string'&&/^[A-Za-z0-9_-]{1,80}$/.test(id);\n  const jobPath=id=>{if(!valid(id))throw new Error('Invalid request_id');return jobs+'/'+id+'.json';};\n  const read=(p,fallback)=>fs.existsSync(p)?JSON.parse(fs.readFileSync(p,'utf8')):fallback;\n  function write(p,value){\n    const temp=p+'.tmp-'+execution+'-'+Date.now();let fd;\n    try{fd=fs.openSync(temp,'wx',0o600);fs.writeFileSync(fd,JSON.stringify(value));fs.fsyncSync(fd);fs.closeSync(fd);fd=undefined;fs.renameSync(temp,p);}\n    finally{if(fd!==undefined)fs.closeSync(fd);if(fs.existsSync(temp))fs.unlinkSync(temp);}\n  }\n  function tx(fn){\n    let fd;try{fd=fs.openSync(control+'.lock-'+RUNTIME,'wx',0o600);}catch(e){if(e.code==='EEXIST')return {mutex_busy:true};throw e;}\n    try{const c=read(control,{version:1,lease:null,generation_waiters:[],postprocess_waiters:[]});c.generation_waiters??=[];c.postprocess_waiters??=[];const result=fn(c);write(control,c);return result;}\n    finally{fs.closeSync(fd);fs.unlinkSync(control+'.lock-'+RUNTIME);}\n  }\n  const get=id=>read(jobPath(id),null);\n  const patch=(id,data)=>{const j=get(id);if(!j)throw new Error('Missing job '+id);const index=read(root+'/executions/'+execution+'.json',null);if(index?.request_id===id&&j.execution_id!==execution)throw new Error('Obsolete worker fenced by recovery.');if(j.cancel_requested&&execution===j.execution_id&&data.status&&data.status!=='deleted')data={...data,status:j.status};Object.assign(j,data,{updated_at:new Date().toISOString()});write(jobPath(id),j);return j;};\n  function owned(c,kind){if(c.lease?.owner!==execution||c.lease?.kind!==kind||c.lease.blocked)throw new Error('Comfy reservation is absent or blocked; inspect scheduler before resubmitting.');}\n  return {fs,root,jobs,execution,valid,jobPath,read,write,tx,get,patch,owned,control};\n})();\n\n\n\nconst base=$('Handle Telegram Wizard').first().json;\nconst path=base.state_path;\nlet key='';\ntry {key=S.fs.readFileSync('/files/.telegram-ui/comfy-control.key','utf8').trim();}catch(_){}\nlet result;\ntry { result=S.tx(c=>{\n let fd;try{fd=S.fs.openSync(path+'.lock-'+RUNTIME,'wx',0o600);}catch(e){if(e.code==='EEXIST')return {busy:true};throw e;}\n try{\n  const state=D.sync(S.read(path,{})),action=state.control_action;\n  if(!action||action.action_id!==String(base.update_id))throw new Error('A operação mudou. Envie o comando novamente.');\n  const now=new Date().toISOString(), own=new RegExp('^tg-'+base.chat_id+'-[0-9]+$');\n  const records=S.fs.readdirSync(S.jobs).filter(n=>n.endsWith('.json')).map(n=>S.read(S.jobs+'/'+n,null)).filter(j=>j&&own.test(j.request_id));\n  const terminal=['rejected','failed','cancelled'];\n  if(action.kind==='recover'){\n   if(c.stop_pending)throw new Error('Há um /stop em andamento. Aguarde sua conclusão antes de recuperar a fila.');\n   c.recover_requested=true;delete state.control_action;S.write(path,state);\n   return {done:true,wake_recovery:true,text:'♻️ Recuperação solicitada. O supervisor publicado verificará em até 60 segundos. Tarefas que ainda estiverem no Comfy serão preservadas; aguarde a fila existente terminar. Jobs rejeitados, cancelados e excluídos não serão reenviados.'};\n  }\n  if(action.kind==='clear'){\n   let count=0;\n   for(const j of records)if([...terminal,'finished'].includes(j.status)&&!j.cleared_at){\n    S.patch(j.request_id,{cleared_at:now,retry_snapshot:null});\n    const archive='/files/.telegram-ui/jobs/'+j.request_id+'.json';if(S.fs.existsSync(archive))S.fs.unlinkSync(archive);delete state.dispatches?.[j.request_id];count++;\n   }\n   // Clear explicitly abandons requests that never reached canonical registration.\n   // The tombstone wins against a delayed POST because Register Job uses this mutex.\n   for(const [pendingId,entry] of Object.entries(state.dispatches??{})){\n    if(!['claiming','uncertain'].includes(entry.status)||D.lookup(pendingId,entry.request).kind!=='missing')continue;\n    S.write(S.jobPath(pendingId),{request_id:pendingId,execution_id:null,status:'cancelled',cancel_requested:true,cleared_at:now,created_at:entry.created_at??now,request:entry.request});\n    const archive='/files/.telegram-ui/jobs/'+pendingId+'.json';if(S.fs.existsSync(archive))S.fs.unlinkSync(archive);\n    delete state.dispatches[pendingId];count++;\n   }\n   // Legacy archives are retained for active/finished jobs, removed for known terminal jobs only.\n   state.draft=null;delete state.rejected_draft;delete state.retry_candidate;delete state.submitting_draft;delete state.submitting_request_id;\n   if(state.last_job&&[...terminal,'finished'].includes(S.get(state.last_job.request_id)?.status??state.last_job.status))state.last_job=null;\n   delete state.control_action;state.revision=(state.revision||0)+1;S.write(path,state);\n   return {done:true,text:`🧹 Rascunhos limpos. ${count} job(s) encerrado(s) retirado(s) da listagem. Arquivos preservados, inclusive os vídeos finais. Jobs ativos mantidos.`};\n  }\n  if(action.kind==='stop'){\n const started=Date.now();\n // Repeated clicks must not reset the deadline or create competing interrupt loops.\n if(c.stop_pending&&c.stop_protocol_version===2&&!c.stop_last_error&&Number.isFinite(c.stop_started_at)&&started-c.stop_started_at<120000){\n  delete state.control_action;S.write(path,state);\n  return {done:true,text:'🛑 Já existe uma parada em andamento. Aguarde a confirmação; novos /stop não reiniciam o prazo.'};\n }\n c.recovery_active=null;c.recover_requested=false;c.paused=true;c.stop_pending=true;\n c.stop_action=String(base.update_id);c.stop_started_at=started;c.stop_idle_samples=0;\n c.stop_idle_since=null;c.stop_protocol_version=2;c.stop_last_error=null;c.stop_requires_restart=false;\n let count=0;\n // Fence every known request, including closed/hidden records with stale submissions.\n // Preserve historical terminal statuses and files; only open jobs become cancelled.\n for(const n of S.fs.readdirSync(S.jobs).filter(n=>n.endsWith('.json'))){\n  const j=S.read(S.jobs+'/'+n,null);if(!j?.request_id||!S.valid(j.request_id))continue;\n  const open=!['finished','rejected','failed','cancelled','deleted','deleting'].includes(j.status);\n  S.patch(j.request_id,{...(open?{status:'cancelled'}:{}),cancel_requested:true,cancelled_at:j.cancelled_at??now,stop_action:c.stop_action});\n  if(open||j.inflight)count++;\n }\n // A missing canonical record must still reject any delayed POST using the old ID/owner.\n if(c.lease?.request_id&&S.valid(c.lease.request_id)&&!S.get(c.lease.request_id)){\n  S.write(S.jobPath(c.lease.request_id),{request_id:c.lease.request_id,execution_id:null,status:'cancelled',cancel_requested:true,cancelled_at:now,stop_action:c.stop_action,orphan_reservation:true});\n }\n c.generation_waiters=[];c.postprocess_waiters=[];\n if(c.lease)c.lease.blocked=true;\n if(state.last_job&&S.get(state.last_job.request_id)?.cancel_requested)state.last_job.status=S.get(state.last_job.request_id).status;\n delete state.control_action;S.write(path,state);\n return {operation:'stop',stop_action:c.stop_action,stop_started_at:started,cancelled_count:count};\n}\n\n  if(action.kind!=='delete')throw new Error('Operação inválida.');\n  if(!state.draft||JSON.stringify(state.draft)!==JSON.stringify(action.draft))throw new Error('O rascunho mudou. Abra /draft e envie /delete novamente.');\n  const id=action.draft.pending_submission_id??action.draft.retry_of??null;\n  if(id&&!own.test(id))throw new Error('Job de outro usuário ou identificador inválido.');\n  let j=id?S.get(id):null;\n  if(id&&!j){\n   const pending=D.saved(state,id);\n   if(!pending)throw new Error('Não encontrei os dados originais do pedido.');\n   if(!/^[a-f0-9]{64}$/.test(key))throw new Error('Confira o complemento n8n_job_control antes de excluir este pedido.');\n   j={request_id:id,execution_id:null,status:'cancelled',cancel_requested:true,request:{...pending.request,upload_name:pending.request.image.replace(/\\.[^.]+$/, '')===id?pending.request.image:id+'_'+pending.request.image}};\n   S.write(S.jobPath(id),j);\n  }\n  if(id&&(!j||!terminal.includes(j.status==='deleting'?j.delete_previous_status:j.status)||j.inflight))throw new Error('Só é possível excluir jobs rejeitados, falhos ou cancelados, sem envio pendente. Use /stop para cancelar jobs ativos. Vídeos finalizados são preservados.');\n  if(id&&!/^[a-f0-9]{64}$/.test(key))throw new Error('Instale n8n_job_control no Comfy e confira SHARED_MEDIA_ROOT antes de /delete.');\n  if(j)S.patch(id,{delete_previous_status:j.delete_previous_status??j.status,status:'deleting',delete_action:String(base.update_id)});\n  action.request_id=id;S.write(path,state);\n  return {operation:'delete',request_id:id,delete_action:String(base.update_id),needs_comfy_delete:!!id};\n }finally{S.fs.closeSync(fd);S.fs.unlinkSync(path+'.lock-'+RUNTIME);}\n});\n} catch(e) {result={done:true,text:'⚠️ '+String(e.message).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')};}\nif(result.mutex_busy||result.busy)result={done:true,text:'Outra operação está em andamento. Envie o comando novamente em alguns segundos.'};\nreturn [{json:{...base,...result,keyboard:{rows:[]}}}];\n"
+      },
+      "id": "d8d6fafc-3818-5414-b5d9-d64052d4ac85",
+      "name": "Plan Bot Control",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        14352,
+        14976
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "eb46fbc5-5492-41ba-95e9-aa7b3166b51d",
+              "leftValue": "={{ $json.done === true }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "7e2d2ddc-83f1-511a-adf1-e80d54643459",
+      "name": "Control Already Completed?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        14576,
+        14976
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "10c27e4f-1861-420c-a8ad-50058110d326",
+              "leftValue": "={{ $json.operation === \"stop\" }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "e47f4fa3-d612-5fad-b774-d896e418dc94",
+      "name": "Is Stop Command?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        14800,
+        15152
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://host.docker.internal:8188/queue",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "{\"clear\": true}",
+        "options": {
+          "timeout": 15000
+        }
+      },
+      "id": "fc0aec4d-47cc-5050-9f4d-c9dcc4afea1c",
+      "name": "Clear Comfy Pending Jobs",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        15248,
+        14976
+      ],
+      "retryOnFail": false,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://host.docker.internal:8188/interrupt",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "{}",
+        "options": {
+          "timeout": 15000
+        }
+      },
+      "id": "da6ee7a4-4f6a-5ed2-866b-739d94ba2ab6",
+      "name": "Interrupt Comfy Job",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        15472,
+        14912
+      ],
+      "retryOnFail": false,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {},
+      "id": "cdab0694-368f-5af2-9d1b-6117823dea2c",
+      "name": "Wait Stop Settling",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        15696,
+        14912
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://host.docker.internal:8188/n8n/jobs/recovery-snapshot",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{ 'Bearer ' + $json.cleanup_key }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "{}",
+        "options": {
+          "timeout": 65000
+        }
+      },
+      "id": "c9f6ff80-1079-51b9-936a-b11562b2050a",
+      "name": "Get Queue After Stop",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        16144,
+        14912
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Docker incarnation: a restart gets a new mutex namespace. Old empty locks are not stolen.\nconst RUNTIME=(()=>{const f=require('fs');try{\n const boot=f.readFileSync('/proc/sys/kernel/random/boot_id','utf8').trim();\n const stat=f.readFileSync('/proc/1/stat','utf8');const fields=stat.slice(stat.lastIndexOf(')')+2).split(' ');\n if(!/^[a-f0-9-]{36}$/.test(boot)||!/^\\d+$/.test(fields[19]))throw Error();return boot+'-'+fields[19];\n}catch(_){throw new Error('Recovery requires the configured Linux Docker container (/proc readable).');}})();\n\n// Shared, embedded in Code nodes. Requires only built-in fs and shared /files.\nconst S = (() => {\n  const fs=require('fs');\n  const root='/files/.telegram-ui/scheduler', jobs=root+'/jobs', control=root+'/control.json';\n  fs.mkdirSync(jobs,{recursive:true,mode:0o700});\n  const execution=String($execution.id);\n  const valid=id=>typeof id==='string'&&/^[A-Za-z0-9_-]{1,80}$/.test(id);\n  const jobPath=id=>{if(!valid(id))throw new Error('Invalid request_id');return jobs+'/'+id+'.json';};\n  const read=(p,fallback)=>fs.existsSync(p)?JSON.parse(fs.readFileSync(p,'utf8')):fallback;\n  function write(p,value){\n    const temp=p+'.tmp-'+execution+'-'+Date.now();let fd;\n    try{fd=fs.openSync(temp,'wx',0o600);fs.writeFileSync(fd,JSON.stringify(value));fs.fsyncSync(fd);fs.closeSync(fd);fd=undefined;fs.renameSync(temp,p);}\n    finally{if(fd!==undefined)fs.closeSync(fd);if(fs.existsSync(temp))fs.unlinkSync(temp);}\n  }\n  function tx(fn){\n    let fd;try{fd=fs.openSync(control+'.lock-'+RUNTIME,'wx',0o600);}catch(e){if(e.code==='EEXIST')return {mutex_busy:true};throw e;}\n    try{const c=read(control,{version:1,lease:null,generation_waiters:[],postprocess_waiters:[]});c.generation_waiters??=[];c.postprocess_waiters??=[];const result=fn(c);write(control,c);return result;}\n    finally{fs.closeSync(fd);fs.unlinkSync(control+'.lock-'+RUNTIME);}\n  }\n  const get=id=>read(jobPath(id),null);\n  const patch=(id,data)=>{const j=get(id);if(!j)throw new Error('Missing job '+id);const index=read(root+'/executions/'+execution+'.json',null);if(index?.request_id===id&&j.execution_id!==execution)throw new Error('Obsolete worker fenced by recovery.');if(j.cancel_requested&&execution===j.execution_id&&data.status&&data.status!=='deleted')data={...data,status:j.status};Object.assign(j,data,{updated_at:new Date().toISOString()});write(jobPath(id),j);return j;};\n  function owned(c,kind){if(c.lease?.owner!==execution||c.lease?.kind!==kind||c.lease.blocked)throw new Error('Comfy reservation is absent or blocked; inspect scheduler before resubmitting.');}\n  return {fs,root,jobs,execution,valid,jobPath,read,write,tx,get,patch,owned,control};\n})();\n\n\n\nconst base=$('Plan Bot Control').first().json,q=$input.first().json;\nconst timeoutText='🛑 O cancelamento foi registrado, mas a parada não foi confirmada dentro do prazo. A admissão continua bloqueada. Confira comfy-status e comfy-logs; depois tente /stop novamente. Não é necessário editar reservas manualmente.';\nconst deadline=Number.isFinite(base.stop_started_at)?base.stop_started_at+120000:null;\nlet result;\ntry {result=S.tx(c=>{\n if(c.stop_action!==base.stop_action)return {done:true,text:'Esta solicitação foi substituída por outro /stop.'};\n const fail=(message,restart=false)=>{c.stop_last_error=message;c.stop_requires_restart=restart;return {done:true,text:message};};\n if((deadline&&Date.now()>deadline)||(Number.isFinite(c.stop_started_at)&&Date.now()-c.stop_started_at>120000))return fail(timeoutText);\n // This endpoint shares the submit gate. A plain empty /queue is NOT a submission barrier.\n const boot=S.read('/files/.telegram-ui/comfy-boot.json',null);\n const valid=q.ok===true&&typeof q.boot_id==='string'&&q.boot_id===boot?.boot_id&&Number.isSafeInteger(q.running)&&q.running>=0&&Number.isSafeInteger(q.pending)&&q.pending>=0&&!q.error;\n if(!valid){\n  return fail('🛑 Cancelamento registrado, mas não consegui confirmar a parada pelo complemento autenticado do Comfy. A fila permanece bloqueada. Confira comfy-status, n8n_job_control, a chave compartilhada e a execução do node Get Queue After Stop; depois tente /stop novamente.');\n }\n const uncertain=[];\n const directory='/files/.telegram-ui/submissions';\n if(S.fs.existsSync(directory))for(const file of S.fs.readdirSync(directory).filter(n=>n.endsWith('.json'))){\n  let saved;try{saved=S.read(directory+'/'+file,null);}catch(_){return fail('🛑 Registro de envio ilegível. A parada ficou bloqueada para preservar a segurança. Confira os arquivos de submissions e tente /stop novamente.');}\n  // A native /prompt may still be uncertain after an internal HTTP timeout.\n  // Only a different Comfy boot invalidates that uncertainty; do not erase it based on queue length.\n  if(saved?.boot_id===q.boot_id&&saved.intent&&!saved.response?.prompt_id)uncertain.push(file);\n }\n if(uncertain.length){\n  c.stop_uncertain_count=uncertain.length;\n  return fail('🛑 Jobs cancelados, mas há '+uncertain.length+' envio(s) HTTP sem confirmação nesta sessão do Comfy. Para concluir: no Termius execute comfy-restart, aguarde a API responder e envie /stop novamente. Os arquivos serão preservados. A admissão permanece bloqueada até essa confirmação.',true);\n }\n let unprotected=false;\n for(const file of S.fs.readdirSync(S.jobs).filter(n=>n.endsWith('.json'))){\n  const j=S.read(S.jobs+'/'+file,null);if(!j?.inflight)continue;\n  if(j.cancel_requested&&j.stop_action===c.stop_action){\n   S.patch(j.request_id,{inflight:null,inflight_cleared_by:'authenticated-stop-snapshot',stopped_boot_id:q.boot_id});\n  }else unprotected=true;\n }\n const idle=q.running===0&&q.pending===0&&!unprotected;\n if(!idle){c.stop_idle_samples=0;c.stop_idle_since=null;return {done:false};}\n if(!Number.isFinite(c.stop_idle_since))c.stop_idle_since=Date.now();\n c.stop_idle_samples=(c.stop_idle_samples||0)+1;\n if(c.stop_idle_samples<2||Date.now()-c.stop_idle_since<4000)return {done:false};\n c.lease=null;c.paused=false;c.stop_pending=false;c.generation_waiters=[];c.postprocess_waiters=[];\n c.stop_last_error=null;c.stop_requires_restart=false;c.stop_uncertain_count=0;\n c.stop_completed_at=new Date().toISOString();\n return {done:true,text:'🛑 Parada confirmada. Comfy sem tarefas executando ou pendentes; reservas e envios residuais foram encerrados. Arquivos preservados. Você já pode enviar novos jobs.'};\n});}catch(e){\n const detail=String(e.message??e).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').slice(0,300);\n return [{json:{...base,done:true,text:'🛑 Não consegui concluir a confirmação da parada: '+detail+'. A admissão não foi liberada. Confira a execução de Check Stop Completion antes de tentar /stop novamente.',keyboard:{rows:[]}}}];\n}\nif(result.mutex_busy&&deadline&&Date.now()>deadline)return [{json:{...base,done:true,text:timeoutText,keyboard:{rows:[]}}}];\nreturn [{json:{...base,done:result.done===true,text:result.text,keyboard:{rows:[]}}}];\n"
+      },
+      "id": "45f3f2dd-6d9c-5539-9cf8-1247e3bef801",
+      "name": "Check Stop Completion",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        16368,
+        14912
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "e541c1c5-9611-41b9-b9e6-bb925e7d434d",
+              "leftValue": "={{ $json.done === true }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "450f8859-6c41-5c5f-8ada-1646b5885671",
+      "name": "Stop Completed?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        16592,
+        14976
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "c2692c7c-afd0-4a7a-9077-d9cdc9d38b19",
+              "leftValue": "={{ $json.needs_comfy_delete === true }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "47bbb6fd-1da3-53da-9921-0fed0589e2d1",
+      "name": "Delete Comfy Files?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        15696,
+        15296
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://host.docker.internal:8188/n8n/jobs/delete",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{ 'Bearer ' + $json.cleanup_key }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ ({request_id:$json.request_id}) }}",
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "id": "497710e7-54ac-5a4d-8f1a-e13f66d564a3",
+      "name": "Delete Job Files in Comfy",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        16144,
+        15360
+      ],
+      "retryOnFail": false,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "const fs=require('fs');const b=$input.first().json;return [{json:{...b,cleanup_key:fs.readFileSync('/files/.telegram-ui/comfy-control.key','utf8').trim()}}];"
+      },
+      "id": "c981734c-235a-5e89-8f97-8375a0d39d54",
+      "name": "Load Cleanup Authorization",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        15920,
+        15360
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Docker incarnation: a restart gets a new mutex namespace. Old empty locks are not stolen.\nconst RUNTIME=(()=>{const f=require('fs');try{\n const boot=f.readFileSync('/proc/sys/kernel/random/boot_id','utf8').trim();\n const stat=f.readFileSync('/proc/1/stat','utf8');const fields=stat.slice(stat.lastIndexOf(')')+2).split(' ');\n if(!/^[a-f0-9-]{36}$/.test(boot)||!/^\\d+$/.test(fields[19]))throw Error();return boot+'-'+fields[19];\n}catch(_){throw new Error('Recovery requires the configured Linux Docker container (/proc readable).');}})();\n\n// Shared, embedded in Code nodes. Requires only built-in fs and shared /files.\nconst S = (() => {\n  const fs=require('fs');\n  const root='/files/.telegram-ui/scheduler', jobs=root+'/jobs', control=root+'/control.json';\n  fs.mkdirSync(jobs,{recursive:true,mode:0o700});\n  const execution=String($execution.id);\n  const valid=id=>typeof id==='string'&&/^[A-Za-z0-9_-]{1,80}$/.test(id);\n  const jobPath=id=>{if(!valid(id))throw new Error('Invalid request_id');return jobs+'/'+id+'.json';};\n  const read=(p,fallback)=>fs.existsSync(p)?JSON.parse(fs.readFileSync(p,'utf8')):fallback;\n  function write(p,value){\n    const temp=p+'.tmp-'+execution+'-'+Date.now();let fd;\n    try{fd=fs.openSync(temp,'wx',0o600);fs.writeFileSync(fd,JSON.stringify(value));fs.fsyncSync(fd);fs.closeSync(fd);fd=undefined;fs.renameSync(temp,p);}\n    finally{if(fd!==undefined)fs.closeSync(fd);if(fs.existsSync(temp))fs.unlinkSync(temp);}\n  }\n  function tx(fn){\n    let fd;try{fd=fs.openSync(control+'.lock-'+RUNTIME,'wx',0o600);}catch(e){if(e.code==='EEXIST')return {mutex_busy:true};throw e;}\n    try{const c=read(control,{version:1,lease:null,generation_waiters:[],postprocess_waiters:[]});c.generation_waiters??=[];c.postprocess_waiters??=[];const result=fn(c);write(control,c);return result;}\n    finally{fs.closeSync(fd);fs.unlinkSync(control+'.lock-'+RUNTIME);}\n  }\n  const get=id=>read(jobPath(id),null);\n  const patch=(id,data)=>{const j=get(id);if(!j)throw new Error('Missing job '+id);const index=read(root+'/executions/'+execution+'.json',null);if(index?.request_id===id&&j.execution_id!==execution)throw new Error('Obsolete worker fenced by recovery.');if(j.cancel_requested&&execution===j.execution_id&&data.status&&data.status!=='deleted')data={...data,status:j.status};Object.assign(j,data,{updated_at:new Date().toISOString()});write(jobPath(id),j);return j;};\n  function owned(c,kind){if(c.lease?.owner!==execution||c.lease?.kind!==kind||c.lease.blocked)throw new Error('Comfy reservation is absent or blocked; inspect scheduler before resubmitting.');}\n  return {fs,root,jobs,execution,valid,jobPath,read,write,tx,get,patch,owned,control};\n})();\n\n\n\nconst base=$('Plan Bot Control').first().json;\nconst response=$input.first().json;\nif(base.needs_comfy_delete&&response.ok!==true)return [{json:{...base,text:'Exclusão não concluída. O rascunho foi preservado. Aguarde a fila do Comfy terminar e envie /delete novamente. Se persistir, confira o complemento e o caminho SHARED_MEDIA_ROOT.',keyboard:{rows:[]}}}];\nconst result=S.tx(()=>{\n let fd;try{fd=S.fs.openSync(base.state_path+'.lock-'+RUNTIME,'wx',0o600);}catch(e){if(e.code==='EEXIST')return {recorded:false};throw e;}\n try{\n const state=S.read(base.state_path,{}),a=state.control_action;\n if(!a||a.action_id!==base.delete_action)throw new Error('Os arquivos do job foram tratados, mas a seleção mudou. Confira /draft antes de reenviar /delete.');\n const id=a.request_id;\n const selected=a.draft;\n const removingLast=!!id&&state.last_job?.request_id===id;\n let shared=false;\n const image=selected.image;\n if(image){\n  // Any other registered job or draft may reference the same original frame.\n  for(const name of S.fs.readdirSync(S.jobs).filter(n=>n.endsWith('.json'))){const j=S.read(S.jobs+'/'+name,null);if(j&&j.request_id!==id&&j.status!=='deleted'&&j.request?.image===image)shared=true;}\n  if(S.fs.existsSync('/files/.telegram-ui/jobs'))for(const n of S.fs.readdirSync('/files/.telegram-ui/jobs').filter(n=>n.endsWith('.json'))){const a=S.read('/files/.telegram-ui/jobs/'+n,null);if(a?.request?.request_id!==id&&a?.request?.image===image)shared=true;}\n  for(const name of S.fs.readdirSync('/files/.telegram-ui').filter(n=>/^\\d+-\\d+\\.json$/.test(n))){const st=S.read('/files/.telegram-ui/'+name,{});\n   const ownState='/files/.telegram-ui/'+name===base.state_path;\n   for(const d of [st.draft,st.retry_candidate?.draft,st.rejected_draft?.draft,...(ownState&&id&&st.last_job?.request_id===id?[]:[st.submitting_draft])]){\n    if(d?.image!==image)continue;\n    if(ownState&&(JSON.stringify(d)===JSON.stringify(selected)||(id&&d.retry_of===id)))continue;\n    shared=true;\n   }\n  }\n  if(!shared){\n   if(!/^[A-Za-z0-9][A-Za-z0-9_-]*\\.(png|jpe?g|webp)$/i.test(image))throw new Error('Nome de imagem inválido.');\n   const p='/files/current/'+image;\n   if(S.fs.existsSync(p)){\n    const info=S.fs.lstatSync(p);if(!info.isFile()||info.isSymbolicLink())throw new Error('Arquivo de imagem não regular.');\n    if(selected.image_bytes!==undefined&&(info.size!==selected.image_bytes||info.mtimeMs!==selected.image_mtime))throw new Error('A imagem foi alterada. Nada foi apagado em current; revise o rascunho.');\n    S.fs.unlinkSync(p);\n   }\n  }\n }\n if(id){\n  if(state.dispatches)delete state.dispatches[id];\n  const archive='/files/.telegram-ui/jobs/'+id+'.json';if(S.fs.existsSync(archive))S.fs.unlinkSync(archive);\n  const old=S.get(id);\n  // Keep only a minimal tombstone so late approval or a repeated request cannot resurrect it.\n  S.write(S.jobPath(id),{request_id:id,execution_id:old.execution_id,status:'deleted',deleted_at:new Date().toISOString(),cancel_requested:true});\n  if(state.last_job?.request_id===id)state.last_job=null;\n  if(state.rejected_draft?.request_id===id)delete state.rejected_draft;\n  if(state.retry_candidate?.request_id===id)delete state.retry_candidate;\n }\n if(JSON.stringify(state.draft)===JSON.stringify(selected))state.draft=null;\n if(state.submitting_request_id===id)delete state.submitting_request_id;\n if(removingLast||JSON.stringify(state.submitting_draft)===JSON.stringify(selected)||state.submitting_draft?.retry_of===id)delete state.submitting_draft;\n delete state.control_action;state.revision=(state.revision||0)+1;S.write(base.state_path,state);\n return {recorded:true,shared};\n }finally{S.fs.closeSync(fd);S.fs.unlinkSync(base.state_path+'.lock-'+RUNTIME);}\n});\nreturn [{json:{...base,recorded:result.recorded===true,text:'🗑 Rascunho e arquivos exclusivos excluídos.'+(result.shared?' O first frame foi preservado porque outro job ou rascunho o utiliza.':''),keyboard:{rows:[]}}}];\n"
+      },
+      "id": "7a971244-820f-5460-9fa9-2c49dbf0e561",
+      "name": "Finish Draft Deletion",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        16368,
+        15296
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "9f490443-0566-4084-bb1e-2023d5cb23c5",
+              "leftValue": "={{ $json.recorded !== false }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "3b8d17d2-d7a5-54a7-8b38-75634422d872",
+      "name": "Draft Deletion Recorded?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        16592,
+        15216
+      ]
+    },
+    {
+      "parameters": {
+        "amount": 1
+      },
+      "id": "0579dff8-8e23-57b7-9833-d916b60880cc",
+      "name": "Wait Draft Deletion Record",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        16816,
+        15744
+      ]
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json.chat_id }}",
+        "text": "={{ $json.text }}",
+        "replyMarkup": "inlineKeyboard",
+        "inlineKeyboard": {
+          "rows": [
+            {
+              "row": {
+                "buttons": [
+                  {
+                    "text": "={{ $json.keyboard.rows[0].row.buttons[0].text }}",
+                    "additionalFields": {
+                      "callback_data": "={{ $json.keyboard.rows[0].row.buttons[0].additionalFields.callback_data }}"
+                    }
+                  },
+                  {
+                    "text": "={{ $json.keyboard.rows[0].row.buttons[1].text }}",
+                    "additionalFields": {
+                      "callback_data": "={{ $json.keyboard.rows[0].row.buttons[1].additionalFields.callback_data }}"
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "row": {
+                "buttons": [
+                  {
+                    "text": "={{ $json.keyboard.rows[1].row.buttons[0].text }}",
+                    "additionalFields": {
+                      "callback_data": "={{ $json.keyboard.rows[1].row.buttons[0].additionalFields.callback_data }}"
+                    }
+                  },
+                  {
+                    "text": "={{ $json.keyboard.rows[1].row.buttons[1].text }}",
+                    "additionalFields": {
+                      "callback_data": "={{ $json.keyboard.rows[1].row.buttons[1].additionalFields.callback_data }}"
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "row": {
+                "buttons": [
+                  {
+                    "text": "={{ $json.keyboard.rows[2].row.buttons[0].text }}",
+                    "additionalFields": {
+                      "callback_data": "={{ $json.keyboard.rows[2].row.buttons[0].additionalFields.callback_data }}"
+                    }
+                  },
+                  {
+                    "text": "={{ $json.keyboard.rows[2].row.buttons[1].text }}",
+                    "additionalFields": {
+                      "callback_data": "={{ $json.keyboard.rows[2].row.buttons[1].additionalFields.callback_data }}"
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "row": {
+                "buttons": [
+                  {
+                    "text": "={{ $json.keyboard.rows[3].row.buttons[0].text }}",
+                    "additionalFields": {
+                      "callback_data": "={{ $json.keyboard.rows[3].row.buttons[0].additionalFields.callback_data }}"
+                    }
+                  },
+                  {
+                    "text": "={{ $json.keyboard.rows[3].row.buttons[1].text }}",
+                    "additionalFields": {
+                      "callback_data": "={{ $json.keyboard.rows[3].row.buttons[1].additionalFields.callback_data }}"
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "row": {
+                "buttons": [
+                  {
+                    "text": "={{ $json.keyboard.rows[4].row.buttons[0].text }}",
+                    "additionalFields": {
+                      "callback_data": "={{ $json.keyboard.rows[4].row.buttons[0].additionalFields.callback_data }}"
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        "additionalFields": {
+          "appendAttribution": false,
+          "parse_mode": "HTML"
+        }
+      },
+      "name": "Send Native Keyboard 10",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "id": "d1b11af5-ec6d-5924-8f74-ccb1bd3114b1",
+      "position": [
+        17040,
+        16224
+      ],
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1500
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "eb46fbc5-5492-41ba-95e9-aa7b3166b51d",
+              "leftValue": "={{ $json.recorded === true }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "8f633e1a-83e0-5490-b09e-408f4f409586",
+      "name": "Dispatch Result Recorded?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        16592,
+        15552
+      ]
+    },
+    {
+      "parameters": {
+        "amount": 1
+      },
+      "id": "1dd55523-8e51-572a-be6f-82e590a28f26",
+      "name": "Wait Dispatch Result",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        16816,
+        16080
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "750fa79e-13e8-4645-8248-a3db0939ffdb",
+              "leftValue": "={{ $json.wake_recovery === true }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "163787d7-cb29-5bed-8318-99730cf6d8a0",
+      "name": "Wake Requested Recovery Needed?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        15920,
+        14640
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const fs=require('fs');const key=fs.readFileSync('/files/.telegram-ui/comfy-control.key','utf8').trim();if(!/^[a-f0-9]{64}$/.test(key))throw new Error('Comfy control key is missing or invalid.');return [{json:{...$input.first().json,cleanup_key:key}}];"
+      },
+      "id": "0054f73e-6e16-58b8-9ea9-8c0c0c0d9ae4",
+      "name": "Wake Requested Recovery Key",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        16144,
+        14720
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://127.0.0.1:5678/webhook/video-queue-reconcile",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-N8N-Recovery-Key",
+              "value": "={{ $json.cleanup_key }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "{}",
+        "options": {
+          "timeout": 10000
+        }
+      },
+      "id": "2a1d7b8a-eb0d-564d-ab34-5802397ad44f",
+      "name": "Wake Requested Recovery",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        16368,
+        14720
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "const base=$('Plan Bot Control').first().json;const response=$input.first().json;const good=response.accepted===true;return [{json:{...base,text:good?'♻️ Supervisor acionado. A fila existente será preservada; a retomada só ocorre após a verificação de segurança.':base.text+'\\n⚠️ O acionamento imediato falhou. Confira se Video Queue - Automatic Recovery está publicado e consulte suas execuções.'}}];"
+      },
+      "id": "03fc8edb-45e9-53cc-a233-72f1f975370f",
+      "name": "Restore Recovery Reply",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        16592,
+        14720
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const fs=require('fs');let key='';try{key=fs.readFileSync('/files/.telegram-ui/comfy-control.key','utf8').trim();}catch(_){}return [{json:{cleanup_key:/^[a-f0-9]{64}$/.test(key)?key:''}}];"
+      },
+      "id": "1c9a1ca9-588d-56d2-a3d0-fe914e686bdf",
+      "name": "Prepare Stop Barrier",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        15920,
+        14912
+      ]
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Plan Bot Control').first().json.chat_id }}",
+        "text": "🛑 Parada solicitada. Cancelando os jobs e verificando os envios pendentes. Aguarde a confirmação; não precisa repetir /stop.",
+        "additionalFields": {
+          "appendAttribution": false,
+          "parse_mode": "HTML"
+        }
+      },
+      "id": "6c2db5c5-1192-5b3f-9e18-01eca2e5ef19",
+      "name": "Notify Stop Requested",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        15024,
+        14976
+      ],
+      "onError": "continueRegularOutput"
+    }
+  ],
+  "connections": {
+    "Send Wizard Reply": {
+      "main": [
+        [
+          {
+            "node": "Send Plain Reply",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Send Native Keyboard 01",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Send Native Keyboard 02",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Send Native Keyboard 03",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Send Native Keyboard 04",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Send Native Keyboard 05",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Send Native Keyboard 06",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Send Native Keyboard 07",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Send Native Keyboard 08",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Send Native Keyboard 09",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Send Native Keyboard 10",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Restore Wizard Reply": {
+      "main": [
+        [
+          {
+            "node": "Send Wizard Reply",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Image Preview": {
+      "main": [
+        [
+          {
+            "node": "Restore Wizard Reply",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read Selected Image": {
+      "main": [
+        [
+          {
+            "node": "Send Image Preview",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Image Preview?": {
+      "main": [
+        [
+          {
+            "node": "Read Selected Image",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Send Wizard Reply",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Status Reply": {
+      "main": [
+        [
+          {
+            "node": "Send Wizard Reply",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Comfy Queue": {
+      "main": [
+        [
+          {
+            "node": "Build Status Reply",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Status?": {
+      "main": [
+        [
+          {
+            "node": "Get Comfy Queue",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Send Image Preview?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Record Dispatch Result": {
+      "main": [
+        [
+          {
+            "node": "Dispatch Result Recorded?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Start Video Workflow": {
+      "main": [
+        [
+          {
+            "node": "Record Dispatch Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Can Dispatch?": {
+      "main": [
+        [
+          {
+            "node": "Start Video Workflow",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Send Wizard Reply",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Queue and Draft": {
+      "main": [
+        [
+          {
+            "node": "Can Dispatch?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate Video?": {
+      "main": [
+        [
+          {
+            "node": "Check Queue and Draft",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Check Status?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Handle Telegram Wizard": {
+      "main": [
+        [
+          {
+            "node": "Bot Control Requested?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Restore Button Context": {
+      "main": [
+        [
+          {
+            "node": "Handle Telegram Wizard",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Answer Button Click": {
+      "main": [
+        [
+          {
+            "node": "Restore Button Context",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is Button Click?": {
+      "main": [
+        [
+          {
+            "node": "Answer Button Click",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Handle Telegram Wizard",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save First Frame": {
+      "main": [
+        [
+          {
+            "node": "Handle Telegram Wizard",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Download First Frame": {
+      "main": [
+        [
+          {
+            "node": "Save First Frame",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Download Allowed?": {
+      "main": [
+        [
+          {
+            "node": "Download First Frame",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Handle Telegram Wizard",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare First Frame Upload": {
+      "main": [
+        [
+          {
+            "node": "Download Allowed?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Has First Frame?": {
+      "main": [
+        [
+          {
+            "node": "Prepare First Frame Upload",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Is Button Click?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Authorize Telegram Update": {
+      "main": [
+        [
+          {
+            "node": "Has First Frame?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Telegram Trigger": {
+      "main": [
+        [
+          {
+            "node": "Authorize Telegram Update",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Bot Control Requested?": {
+      "main": [
+        [
+          {
+            "node": "Plan Bot Control",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Generate Video?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Plan Bot Control": {
+      "main": [
+        [
+          {
+            "node": "Control Already Completed?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Control Already Completed?": {
+      "main": [
+        [
+          {
+            "node": "Wake Requested Recovery Needed?",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Is Stop Command?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is Stop Command?": {
+      "main": [
+        [
+          {
+            "node": "Notify Stop Requested",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Delete Comfy Files?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Clear Comfy Pending Jobs": {
+      "main": [
+        [
+          {
+            "node": "Interrupt Comfy Job",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Interrupt Comfy Job": {
+      "main": [
+        [
+          {
+            "node": "Wait Stop Settling",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait Stop Settling": {
+      "main": [
+        [
+          {
+            "node": "Prepare Stop Barrier",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Queue After Stop": {
+      "main": [
+        [
+          {
+            "node": "Check Stop Completion",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Stop Completion": {
+      "main": [
+        [
+          {
+            "node": "Stop Completed?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Stop Completed?": {
+      "main": [
+        [
+          {
+            "node": "Send Wizard Reply",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Clear Comfy Pending Jobs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Delete Comfy Files?": {
+      "main": [
+        [
+          {
+            "node": "Load Cleanup Authorization",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Finish Draft Deletion",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Load Cleanup Authorization": {
+      "main": [
+        [
+          {
+            "node": "Delete Job Files in Comfy",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Delete Job Files in Comfy": {
+      "main": [
+        [
+          {
+            "node": "Finish Draft Deletion",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Finish Draft Deletion": {
+      "main": [
+        [
+          {
+            "node": "Draft Deletion Recorded?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Draft Deletion Recorded?": {
+      "main": [
+        [
+          {
+            "node": "Send Wizard Reply",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Wait Draft Deletion Record",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait Draft Deletion Record": {
+      "main": [
+        [
+          {
+            "node": "Finish Draft Deletion",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Dispatch Result Recorded?": {
+      "main": [
+        [
+          {
+            "node": "Send Wizard Reply",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Wait Dispatch Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait Dispatch Result": {
+      "main": [
+        [
+          {
+            "node": "Record Dispatch Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wake Requested Recovery Needed?": {
+      "main": [
+        [
+          {
+            "node": "Wake Requested Recovery Key",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Send Wizard Reply",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wake Requested Recovery Key": {
+      "main": [
+        [
+          {
+            "node": "Wake Requested Recovery",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wake Requested Recovery": {
+      "main": [
+        [
+          {
+            "node": "Restore Recovery Reply",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Restore Recovery Reply": {
+      "main": [
+        [
+          {
+            "node": "Send Wizard Reply",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Stop Barrier": {
+      "main": [
+        [
+          {
+            "node": "Get Queue After Stop",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Notify Stop Requested": {
+      "main": [
+        [
+          {
+            "node": "Clear Comfy Pending Jobs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "timeSavedMode": "fixed",
+    "callerPolicy": "workflowsFromSameOwner",
+    "availableInMCP": false
+  },
+  "active": false,
+  "pinData": {}
+}

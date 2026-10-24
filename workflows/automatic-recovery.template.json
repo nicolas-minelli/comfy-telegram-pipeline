@@ -1,0 +1,625 @@
+{
+  "name": "Video Queue - Automatic Recovery v2",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes",
+              "minutesInterval": 1
+            }
+          ]
+        }
+      },
+      "name": "Recovery Schedule",
+      "id": "1fb41756-6534-5fdc-bc02-227964fee3a2",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        6080,
+        2544
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Queue metadata is shared by Desktop and console servers; there is no separate CLI API.\nconst Q=(()=>{\n const terminal=new Set(['finished','rejected','failed','cancelled','deleted','deleting']);\n function prune(c){\n  for(const name of ['generation_waiters','postprocess_waiters']){\n   const seen=new Set();c[name]=(c[name]??[]).filter(w=>{\n    if(!w||!w.owner)return false;\n    let j=w.request_id&&S.valid(w.request_id)?S.get(w.request_id):null;\n    if(!j&&S.valid(String(w.owner))){const index=S.read(S.root+'/executions/'+w.owner+'.json',null);if(index?.request_id&&S.valid(index.request_id))j=S.get(index.request_id);}\n    // Unknown legacy entries remain blocked for reconciliation; never infer a dead worker by age.\n    if(j&&(String(j.execution_id)!==String(w.owner)||j.cleared_at||j.cancel_requested||terminal.has(j.status)))return false;\n    const key=String(w.owner);if(seen.has(key))return false;seen.add(key);return true;\n   });\n  }\n }\n function reason(c,stage){\n  const boot=S.read('/files/.telegram-ui/comfy-boot.json',null);\n  if(c.stop_pending)return {code:'stop_pending',detail:'O cancelamento global ainda está em andamento.',wake:false};\n  if(boot?.boot_id&&(c.reconciled_boot!==boot.boot_id||c.reconciled_runtime!==RUNTIME))return {code:'restart_reconciliation',detail:'Comfy reiniciado: aguardando o supervisor reconciliar a fila salva.',wake:true};\n  if(c.recovery_active)return {code:'recovery_active',detail:'Recuperação em andamento; aguardando a fila existente terminar.',wake:true};\n  if(c.paused||c.lease?.blocked){\n   // A positively identified closed/obsolete lease owner can request the ordinary safe recovery.\n   // Recovery still fences workers and waits for two empty server snapshots before releasing it.\n   const lease=c.lease,j=lease?.request_id&&S.valid(lease.request_id)?S.get(lease.request_id):null;\n   const orphan=j&&(terminal.has(j.status)||j.cancel_requested||j.execution_id!==lease.owner);\n   const marker=lease?JSON.stringify([lease.owner,lease.request_id,boot?.boot_id,RUNTIME]):null;\n   if(orphan&&marker!==c.auto_recover_marker){c.recover_requested=true;c.auto_recover_marker=marker;}\n   return {code:'admission_paused',detail:'Admissão pausada'+(lease?' pela reserva '+lease.kind+' de '+lease.request_id:'')+'. Consulte /status e /recover.',wake:!!orphan||c.recover_requested===true};\n  }\n  if(c.lease)return {code:'resource_reserved',detail:'Recurso reservado para '+c.lease.kind+' do job '+c.lease.request_id+'.',wake:false};\n  if(stage==='generation'&&c.postprocess_waiters.length)return {code:'postprocess_priority',detail:'Há pós-processamento aprovado com prioridade para evitar sobrecarga de memória.',wake:false};\n  const first=(stage==='generation'?c.generation_waiters:c.postprocess_waiters)[0];\n  if(first?.owner!==S.execution)return {code:'fifo',detail:'Aguardando os pedidos anteriores na fila de '+(stage==='generation'?'geração':'pós-processamento')+'.',wake:false};\n  return null;\n }\n return {prune,reason};\n})();\n\n// Docker incarnation: a restart gets a new mutex namespace. Old empty locks are not stolen.\nconst RUNTIME=(()=>{const f=require('fs');try{\n const boot=f.readFileSync('/proc/sys/kernel/random/boot_id','utf8').trim();\n const stat=f.readFileSync('/proc/1/stat','utf8');const fields=stat.slice(stat.lastIndexOf(')')+2).split(' ');\n if(!/^[a-f0-9-]{36}$/.test(boot)||!/^\\d+$/.test(fields[19]))throw Error();return boot+'-'+fields[19];\n}catch(_){throw new Error('Recovery requires the configured Linux Docker container (/proc readable).');}})();\n\n// Shared, embedded in Code nodes. Requires only built-in fs and shared /files.\nconst S = (() => {\n  const fs=require('fs');\n  const root='/files/.telegram-ui/scheduler', jobs=root+'/jobs', control=root+'/control.json';\n  fs.mkdirSync(jobs,{recursive:true,mode:0o700});\n  const execution=String($execution.id);\n  const valid=id=>typeof id==='string'&&/^[A-Za-z0-9_-]{1,80}$/.test(id);\n  const jobPath=id=>{if(!valid(id))throw new Error('Invalid request_id');return jobs+'/'+id+'.json';};\n  const read=(p,fallback)=>fs.existsSync(p)?JSON.parse(fs.readFileSync(p,'utf8')):fallback;\n  function write(p,value){\n    const temp=p+'.tmp-'+execution+'-'+Date.now();let fd;\n    try{fd=fs.openSync(temp,'wx',0o600);fs.writeFileSync(fd,JSON.stringify(value));fs.fsyncSync(fd);fs.closeSync(fd);fd=undefined;fs.renameSync(temp,p);}\n    finally{if(fd!==undefined)fs.closeSync(fd);if(fs.existsSync(temp))fs.unlinkSync(temp);}\n  }\n  function tx(fn){\n    let fd;try{fd=fs.openSync(control+'.lock-'+RUNTIME,'wx',0o600);}catch(e){if(e.code==='EEXIST')return {mutex_busy:true};throw e;}\n    try{const c=read(control,{version:1,lease:null,generation_waiters:[],postprocess_waiters:[]});c.generation_waiters??=[];c.postprocess_waiters??=[];const result=fn(c);write(control,c);return result;}\n    finally{fs.closeSync(fd);fs.unlinkSync(control+'.lock-'+RUNTIME);}\n  }\n  const get=id=>read(jobPath(id),null);\n  const patch=(id,data)=>{const j=get(id);if(!j)throw new Error('Missing job '+id);const index=read(root+'/executions/'+execution+'.json',null);if(index?.request_id===id&&j.execution_id!==execution)throw new Error('Obsolete worker fenced by recovery.');if(j.cancel_requested&&execution===j.execution_id&&data.status&&data.status!=='deleted')data={...data,status:j.status};Object.assign(j,data,{updated_at:new Date().toISOString()});write(jobPath(id),j);return j;};\n  function owned(c,kind){if(c.lease?.owner!==execution||c.lease?.kind!==kind||c.lease.blocked)throw new Error('Comfy reservation is absent or blocked; inspect scheduler before resubmitting.');}\n  return {fs,root,jobs,execution,valid,jobPath,read,write,tx,get,patch,owned,control};\n})();\n\nconst boot=S.read('/files/.telegram-ui/comfy-boot.json',null);\nif(!boot?.boot_id)return [];\nconst result=S.tx(c=>{\n Q.prune(c);\n if(c.stop_pending)return {skip:true};\n const force=c.recover_requested===true;\n const changed=c.reconciled_boot!==boot.boot_id||c.reconciled_runtime!==RUNTIME;\n if(c.recovery_active){if(changed)c.recovery_active.idle_since=null;c.recover_requested=false;c.reconciled_boot=boot.boot_id;c.reconciled_runtime=RUNTIME;return {scan:true,boot_id:boot.boot_id};}\n if(!force&&!changed)return {scan:false};\n if(c.lease&&!/^tg-0-[0-9]+$/.test(c.lease.request_id??''))return {skip:true};\n const terminal=['finished','rejected','cancelled','deleted','deleting'];let count=0;\n const session=String(Date.now())+'-'+S.execution;\n const oldOwners=new Set();\n for(const n of S.fs.readdirSync(S.jobs).filter(n=>n.endsWith('.json'))){const j=S.read(S.jobs+'/'+n,null);\n  if(!j||!/^tg-0-[0-9]+$/.test(j.request_id??'')||terminal.includes(j.status)||j.cleared_at||j.cancel_requested)continue;\n  // A reported error is retried once after a restart, or on an explicit /recover.\n  if(j.recovery?.boot_id===boot.boot_id&&j.recovery?.runtime===RUNTIME&&!force)continue;\n  oldOwners.add(j.execution_id);\n  const prior=j.recovery?.previous_status??j.status;\n  S.patch(j.request_id,{execution_id:'recovering-'+session+'-'+count,status:'recovering',inflight:null,wait_reason:null,wait_detail:null,recovery_wake_error:null,history_poll:null,\n   recovery:{ticket:session+'-'+count,previous_status:prior,previous_execution_id:j.execution_id,boot_id:boot.boot_id,runtime:RUNTIME,claimed:false},\n   // Approval already obtained for the saved LTX video remains valid, not for a regenerated one.\n   approved:j.approved===true||(c.lease?.kind==='postprocess'&&c.lease.request_id===j.request_id)||['waiting_postprocess','postprocess_waiting_for_idle','interpolating','upscaling'].includes(prior)});\n  count++;\n }\n c.generation_waiters=c.generation_waiters.filter(w=>!oldOwners.has(w.owner));\n c.postprocess_waiters=c.postprocess_waiters.filter(w=>!oldOwners.has(w.owner));\n c.recover_requested=false;c.reconciled_boot=boot.boot_id;c.reconciled_runtime=RUNTIME;\n if(count||c.lease||c.paused){c.recovery_active={session,count,started_at:Date.now(),manual:force};c.paused=true;}\n else if(force)c.recovery_notice='Nenhum job pendente para recuperar. Jobs cancelados, rejeitados e finalizados foram preservados.';\n return {scan:!!c.recovery_active};\n});\nif(result.mutex_busy)return [];\nreturn [{json:{...result,cleanup_key:S.fs.readFileSync('/files/.telegram-ui/comfy-control.key','utf8').trim()}}];\n"
+      },
+      "name": "Prepare Recovery Scan",
+      "id": "e2856d14-7ea8-5fab-bd6d-fc1fba1a99eb",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        6304,
+        2448
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "3a1056c1-de94-46f9-bc86-5ec6f1934370",
+              "leftValue": "={{ $json.scan === true }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "name": "Snapshot Required?",
+      "id": "f48f98c8-f1da-519d-ae65-2dcc70bf0779",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        6528,
+        2448
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://host.docker.internal:8188/n8n/jobs/recovery-snapshot",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{ 'Bearer ' + $json.cleanup_key }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "{}",
+        "options": {
+          "timeout": 60000
+        }
+      },
+      "name": "Get Recovery Snapshot",
+      "id": "ec4f8bd9-89c1-5569-9d5d-a5f858ccac28",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        6752,
+        2384
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Docker incarnation: a restart gets a new mutex namespace. Old empty locks are not stolen.\nconst RUNTIME=(()=>{const f=require('fs');try{\n const boot=f.readFileSync('/proc/sys/kernel/random/boot_id','utf8').trim();\n const stat=f.readFileSync('/proc/1/stat','utf8');const fields=stat.slice(stat.lastIndexOf(')')+2).split(' ');\n if(!/^[a-f0-9-]{36}$/.test(boot)||!/^\\d+$/.test(fields[19]))throw Error();return boot+'-'+fields[19];\n}catch(_){throw new Error('Recovery requires the configured Linux Docker container (/proc readable).');}})();\n\n// Shared, embedded in Code nodes. Requires only built-in fs and shared /files.\nconst S = (() => {\n  const fs=require('fs');\n  const root='/files/.telegram-ui/scheduler', jobs=root+'/jobs', control=root+'/control.json';\n  fs.mkdirSync(jobs,{recursive:true,mode:0o700});\n  const execution=String($execution.id);\n  const valid=id=>typeof id==='string'&&/^[A-Za-z0-9_-]{1,80}$/.test(id);\n  const jobPath=id=>{if(!valid(id))throw new Error('Invalid request_id');return jobs+'/'+id+'.json';};\n  const read=(p,fallback)=>fs.existsSync(p)?JSON.parse(fs.readFileSync(p,'utf8')):fallback;\n  function write(p,value){\n    const temp=p+'.tmp-'+execution+'-'+Date.now();let fd;\n    try{fd=fs.openSync(temp,'wx',0o600);fs.writeFileSync(fd,JSON.stringify(value));fs.fsyncSync(fd);fs.closeSync(fd);fd=undefined;fs.renameSync(temp,p);}\n    finally{if(fd!==undefined)fs.closeSync(fd);if(fs.existsSync(temp))fs.unlinkSync(temp);}\n  }\n  function tx(fn){\n    let fd;try{fd=fs.openSync(control+'.lock-'+RUNTIME,'wx',0o600);}catch(e){if(e.code==='EEXIST')return {mutex_busy:true};throw e;}\n    try{const c=read(control,{version:1,lease:null,generation_waiters:[],postprocess_waiters:[]});c.generation_waiters??=[];c.postprocess_waiters??=[];const result=fn(c);write(control,c);return result;}\n    finally{fs.closeSync(fd);fs.unlinkSync(control+'.lock-'+RUNTIME);}\n  }\n  const get=id=>read(jobPath(id),null);\n  const patch=(id,data)=>{const j=get(id);if(!j)throw new Error('Missing job '+id);const index=read(root+'/executions/'+execution+'.json',null);if(index?.request_id===id&&j.execution_id!==execution)throw new Error('Obsolete worker fenced by recovery.');if(j.cancel_requested&&execution===j.execution_id&&data.status&&data.status!=='deleted')data={...data,status:j.status};Object.assign(j,data,{updated_at:new Date().toISOString()});write(jobPath(id),j);return j;};\n  function owned(c,kind){if(c.lease?.owner!==execution||c.lease?.kind!==kind||c.lease.blocked)throw new Error('Comfy reservation is absent or blocked; inspect scheduler before resubmitting.');}\n  return {fs,root,jobs,execution,valid,jobPath,read,write,tx,get,patch,owned,control};\n})();\n\nconst snapshot=$input.first().json;\nif(snapshot.ok!==true){\n const failure=S.tx(c=>{const now=Date.now();if(!c.recovery_failure_notice_at||now-c.recovery_failure_notice_at>=300000){c.recovery_failure_notice_at=now;c.recovery_notice='⚠️ Recuperação sem confirmação do Comfy. Confira a conexão, a chave e a versão de n8n_job_control; nenhuma reserva foi liberada.';}return {};});\n return [{json:{ready:false}}];\n}\nconst result=S.tx(c=>{\n if(!c.recovery_active||c.stop_pending)return {ready:false};\n // Workers were fenced before this snapshot; the server serializes snapshot with submission.\n if(snapshot.running||snapshot.pending){c.recovery_active.idle_since=null;return {ready:false};}\n if(!c.recovery_active.idle_since){c.recovery_active.idle_since=Date.now();return {ready:false};}\n if(Date.now()-c.recovery_active.idle_since<30000)return {ready:false};\n let planned=0,finished=0,blocked=0,uncertain=false;\n for(const item of snapshot.jobs??[]){\n  const j=S.get(item.request_id);if(!j||j.status!=='recovering')continue;\n  if(item.invalid_request&&!item.submission_uncertain){S.patch(j.request_id,{status:'recovery_needs_data',recovery_error:'Parâmetros inválidos no registro original. Nenhuma geração foi enviada.'});blocked++;continue;}\n  if(item.submission_uncertain){S.patch(j.request_id,{status:'recovery_needs_restart',recovery_error:'Envio HTTP sem confirmação nesta sessão Comfy. Reinicie o Comfy para invalidar a tarefa incerta.'});blocked++;uncertain=true;continue;}\n  const req=j.request;let plan;\n  if(!Number.isSafeInteger(req?.seed)||typeof req.prompt!=='string'||![2,4,6,8,10].includes(req.duration_seconds)){S.patch(j.request_id,{status:'recovery_needs_data',recovery_error:'Parâmetros originais incompletos; nenhum valor foi inventado.'});blocked++;continue;}\n  if(item.final_video){S.patch(j.request_id,{status:'finished',final_video:item.final_video,finished_at:new Date().toISOString()});finished++;continue;}\n  if(item.unverified_final){S.patch(j.request_id,{status:'recovery_needs_review',recovery_error:'Existe um vídeo final antigo sem recibo de integridade. Arquivo preservado; não foi regenerado.'});blocked++;continue;}\n  if(item.unverified_video){S.patch(j.request_id,{status:'recovery_needs_review',recovery_error:'Existe saída antiga, mas o decodificador não está disponível para validá-la. Nenhum vídeo foi duplicado.'});blocked++;continue;}\n  const video=item.video;\n  if(video){plan={mode:j.approved?'postprocess':'review',video,interpolated_video:item.interpolated_video??null};}\n  else if(item.image_available)plan={mode:'generate'};\n  else {S.patch(j.request_id,{status:'recovery_needs_image',recovery_error:'First frame original não está disponível.'});blocked++;continue;}\n  S.patch(j.request_id,{status:'recovery_pending',wait_reason:null,wait_detail:null,recovery_wake_error:null,history_poll:null,approved:plan.mode==='postprocess',recovery:{...j.recovery,plan,claimed:false},inflight:null,error:null});planned++;\n }\n // Do not release an uninspected job if a corrupt/missing record was skipped.\n const unresolved=S.fs.readdirSync(S.jobs).filter(n=>n.endsWith('.json')).some(n=>S.read(S.jobs+'/'+n,null)?.status==='recovering');\n if(unresolved)return {ready:false};\n c.lease=null;c.paused=uncertain;c.recovery_active=null;\n c.recovery_notice=`♻️ Recuperação concluída: ${planned} pedido(s) preparado(s) para retomada; ${finished} já finalizado(s); ${blocked} precisa(m) de atenção. A fila será reenviada em ordem, um pedido por minuto. Aprovações pendentes continuam exigindo sua decisão.${uncertain?' ⚠️ A admissão ficou pausada por um envio HTTP incerto. Reinicie o Comfy; depois o supervisor retomará automaticamente, sem duplicar esse envio.':''}`;\n return {ready:true};\n});\nreturn [{json:{ready:result.ready===true}}];\n"
+      },
+      "name": "Plan Recovery Stages",
+      "id": "823622be-32d1-58cc-bee6-13bcc472445d",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        6976,
+        2384
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Docker incarnation: a restart gets a new mutex namespace. Old empty locks are not stolen.\nconst RUNTIME=(()=>{const f=require('fs');try{\n const boot=f.readFileSync('/proc/sys/kernel/random/boot_id','utf8').trim();\n const stat=f.readFileSync('/proc/1/stat','utf8');const fields=stat.slice(stat.lastIndexOf(')')+2).split(' ');\n if(!/^[a-f0-9-]{36}$/.test(boot)||!/^\\d+$/.test(fields[19]))throw Error();return boot+'-'+fields[19];\n}catch(_){throw new Error('Recovery requires the configured Linux Docker container (/proc readable).');}})();\n\n// Shared, embedded in Code nodes. Requires only built-in fs and shared /files.\nconst S = (() => {\n  const fs=require('fs');\n  const root='/files/.telegram-ui/scheduler', jobs=root+'/jobs', control=root+'/control.json';\n  fs.mkdirSync(jobs,{recursive:true,mode:0o700});\n  const execution=String($execution.id);\n  const valid=id=>typeof id==='string'&&/^[A-Za-z0-9_-]{1,80}$/.test(id);\n  const jobPath=id=>{if(!valid(id))throw new Error('Invalid request_id');return jobs+'/'+id+'.json';};\n  const read=(p,fallback)=>fs.existsSync(p)?JSON.parse(fs.readFileSync(p,'utf8')):fallback;\n  function write(p,value){\n    const temp=p+'.tmp-'+execution+'-'+Date.now();let fd;\n    try{fd=fs.openSync(temp,'wx',0o600);fs.writeFileSync(fd,JSON.stringify(value));fs.fsyncSync(fd);fs.closeSync(fd);fd=undefined;fs.renameSync(temp,p);}\n    finally{if(fd!==undefined)fs.closeSync(fd);if(fs.existsSync(temp))fs.unlinkSync(temp);}\n  }\n  function tx(fn){\n    let fd;try{fd=fs.openSync(control+'.lock-'+RUNTIME,'wx',0o600);}catch(e){if(e.code==='EEXIST')return {mutex_busy:true};throw e;}\n    try{const c=read(control,{version:1,lease:null,generation_waiters:[],postprocess_waiters:[]});c.generation_waiters??=[];c.postprocess_waiters??=[];const result=fn(c);write(control,c);return result;}\n    finally{fs.closeSync(fd);fs.unlinkSync(control+'.lock-'+RUNTIME);}\n  }\n  const get=id=>read(jobPath(id),null);\n  const patch=(id,data)=>{const j=get(id);if(!j)throw new Error('Missing job '+id);const index=read(root+'/executions/'+execution+'.json',null);if(index?.request_id===id&&j.execution_id!==execution)throw new Error('Obsolete worker fenced by recovery.');if(j.cancel_requested&&execution===j.execution_id&&data.status&&data.status!=='deleted')data={...data,status:j.status};Object.assign(j,data,{updated_at:new Date().toISOString()});write(jobPath(id),j);return j;};\n  function owned(c,kind){if(c.lease?.owner!==execution||c.lease?.kind!==kind||c.lease.blocked)throw new Error('Comfy reservation is absent or blocked; inspect scheduler before resubmitting.');}\n  return {fs,root,jobs,execution,valid,jobPath,read,write,tx,get,patch,owned,control};\n})();\n\nconst result=S.tx(c=>{\n if(c.recovery_active||c.stop_pending||c.paused)return {dispatch:false};\n const list=S.fs.readdirSync(S.jobs).filter(n=>n.endsWith('.json')).map(n=>S.read(S.jobs+'/'+n,null))\n  .filter(j=>j?.status==='recovery_pending'&&!j.recovery?.claimed&&!j.cancel_requested&&!j.cleared_at);\n list.sort((a,b)=>String(a.created_at).localeCompare(String(b.created_at))||a.request_id.localeCompare(b.request_id,'en',{numeric:true}));\n const j=list[0];\n if(!j||Date.now()-(j.recovery.dispatched_at??0)<45000)return {dispatch:false};\n S.patch(j.request_id,{recovery:{...j.recovery,dispatched_at:Date.now()}});\n return {dispatch:true,request_id:j.request_id,recovery_token:j.recovery.ticket};\n});\nreturn [{json:{dispatch:result.dispatch===true,...result,cleanup_key:S.fs.readFileSync('/files/.telegram-ui/comfy-control.key','utf8').trim()}}];\n"
+      },
+      "name": "Dispatch Oldest Recovery",
+      "id": "6745a52d-82ab-556f-aab5-dfba938c3c13",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        7200,
+        2448
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "682a7b97-ccd6-4093-ad9b-547bdee9f4a3",
+              "leftValue": "={{ $json.dispatch === true }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "name": "Recovery Dispatch Required?",
+      "id": "fcf8eee9-c8ee-5e9b-b277-20bb86aa5df5",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        7424,
+        2448
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://127.0.0.1:5678/webhook/start",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-N8N-Recovery-Key",
+              "value": "={{ $json.cleanup_key }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ ({request_id:$json.request_id,recovery_token:$json.recovery_token}) }}",
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "name": "Resume Video Workflow",
+      "id": "428ae07e-5a7a-53cc-956b-a131346192ee",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        7648,
+        2384
+      ],
+      "retryOnFail": false,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Docker incarnation: a restart gets a new mutex namespace. Old empty locks are not stolen.\nconst RUNTIME=(()=>{const f=require('fs');try{\n const boot=f.readFileSync('/proc/sys/kernel/random/boot_id','utf8').trim();\n const stat=f.readFileSync('/proc/1/stat','utf8');const fields=stat.slice(stat.lastIndexOf(')')+2).split(' ');\n if(!/^[a-f0-9-]{36}$/.test(boot)||!/^\\d+$/.test(fields[19]))throw Error();return boot+'-'+fields[19];\n}catch(_){throw new Error('Recovery requires the configured Linux Docker container (/proc readable).');}})();\n\n// Shared, embedded in Code nodes. Requires only built-in fs and shared /files.\nconst S = (() => {\n  const fs=require('fs');\n  const root='/files/.telegram-ui/scheduler', jobs=root+'/jobs', control=root+'/control.json';\n  fs.mkdirSync(jobs,{recursive:true,mode:0o700});\n  const execution=String($execution.id);\n  const valid=id=>typeof id==='string'&&/^[A-Za-z0-9_-]{1,80}$/.test(id);\n  const jobPath=id=>{if(!valid(id))throw new Error('Invalid request_id');return jobs+'/'+id+'.json';};\n  const read=(p,fallback)=>fs.existsSync(p)?JSON.parse(fs.readFileSync(p,'utf8')):fallback;\n  function write(p,value){\n    const temp=p+'.tmp-'+execution+'-'+Date.now();let fd;\n    try{fd=fs.openSync(temp,'wx',0o600);fs.writeFileSync(fd,JSON.stringify(value));fs.fsyncSync(fd);fs.closeSync(fd);fd=undefined;fs.renameSync(temp,p);}\n    finally{if(fd!==undefined)fs.closeSync(fd);if(fs.existsSync(temp))fs.unlinkSync(temp);}\n  }\n  function tx(fn){\n    let fd;try{fd=fs.openSync(control+'.lock-'+RUNTIME,'wx',0o600);}catch(e){if(e.code==='EEXIST')return {mutex_busy:true};throw e;}\n    try{const c=read(control,{version:1,lease:null,generation_waiters:[],postprocess_waiters:[]});c.generation_waiters??=[];c.postprocess_waiters??=[];const result=fn(c);write(control,c);return result;}\n    finally{fs.closeSync(fd);fs.unlinkSync(control+'.lock-'+RUNTIME);}\n  }\n  const get=id=>read(jobPath(id),null);\n  const patch=(id,data)=>{const j=get(id);if(!j)throw new Error('Missing job '+id);const index=read(root+'/executions/'+execution+'.json',null);if(index?.request_id===id&&j.execution_id!==execution)throw new Error('Obsolete worker fenced by recovery.');if(j.cancel_requested&&execution===j.execution_id&&data.status&&data.status!=='deleted')data={...data,status:j.status};Object.assign(j,data,{updated_at:new Date().toISOString()});write(jobPath(id),j);return j;};\n  function owned(c,kind){if(c.lease?.owner!==execution||c.lease?.kind!==kind||c.lease.blocked)throw new Error('Comfy reservation is absent or blocked; inspect scheduler before resubmitting.');}\n  return {fs,root,jobs,execution,valid,jobPath,read,write,tx,get,patch,owned,control};\n})();\n\nconst result=S.tx(c=>{const text=c.recovery_notice;if(!text)return {};return {text};});\nif(!result.text)return [];\nreturn [{json:{chat_id:'0',text:result.text}}];\n"
+      },
+      "name": "Recovery Notice",
+      "id": "c26e755b-1a3a-5f30-aa78-e2b34336e167",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        7872,
+        2448
+      ]
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json.chat_id }}",
+        "text": "={{ $json.text }}",
+        "additionalFields": {
+          "appendAttribution": false,
+          "parse_mode": "HTML"
+        }
+      },
+      "name": "Notify Recovery",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "id": "04b0847b-fb62-5779-80a8-04b25c594c1d",
+      "position": [
+        8096,
+        2448
+      ],
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1500,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "video-queue-reconcile",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "fa849012-eda0-5002-a30d-024fa893bff7",
+      "name": "Receive Recovery Wake",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.2,
+      "position": [
+        5632,
+        2352
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const fs=require('fs'),input=$input.first().json;const key=fs.readFileSync('/files/.telegram-ui/comfy-control.key','utf8').trim();if(!/^[a-f0-9]{64}$/.test(key)||input.headers?.['x-n8n-recovery-key']!==key)throw new Error('Recovery authorization required.');return [{json:{authorized:true}}];"
+      },
+      "id": "e52b9c7b-057f-5efa-b6d6-8a63985fab13",
+      "name": "Authorize Recovery Wake",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        5856,
+        2352
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ ({accepted:true}) }}",
+        "options": {
+          "responseCode": 202
+        }
+      },
+      "id": "93e76990-48fc-5ed5-965f-403ac96e43e4",
+      "name": "Acknowledge Recovery Wake",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        6080,
+        2352
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Docker incarnation: a restart gets a new mutex namespace. Old empty locks are not stolen.\nconst RUNTIME=(()=>{const f=require('fs');try{\n const boot=f.readFileSync('/proc/sys/kernel/random/boot_id','utf8').trim();\n const stat=f.readFileSync('/proc/1/stat','utf8');const fields=stat.slice(stat.lastIndexOf(')')+2).split(' ');\n if(!/^[a-f0-9-]{36}$/.test(boot)||!/^\\d+$/.test(fields[19]))throw Error();return boot+'-'+fields[19];\n}catch(_){throw new Error('Recovery requires the configured Linux Docker container (/proc readable).');}})();\n\n// Shared, embedded in Code nodes. Requires only built-in fs and shared /files.\nconst S = (() => {\n  const fs=require('fs');\n  const root='/files/.telegram-ui/scheduler', jobs=root+'/jobs', control=root+'/control.json';\n  fs.mkdirSync(jobs,{recursive:true,mode:0o700});\n  const execution=String($execution.id);\n  const valid=id=>typeof id==='string'&&/^[A-Za-z0-9_-]{1,80}$/.test(id);\n  const jobPath=id=>{if(!valid(id))throw new Error('Invalid request_id');return jobs+'/'+id+'.json';};\n  const read=(p,fallback)=>fs.existsSync(p)?JSON.parse(fs.readFileSync(p,'utf8')):fallback;\n  function write(p,value){\n    const temp=p+'.tmp-'+execution+'-'+Date.now();let fd;\n    try{fd=fs.openSync(temp,'wx',0o600);fs.writeFileSync(fd,JSON.stringify(value));fs.fsyncSync(fd);fs.closeSync(fd);fd=undefined;fs.renameSync(temp,p);}\n    finally{if(fd!==undefined)fs.closeSync(fd);if(fs.existsSync(temp))fs.unlinkSync(temp);}\n  }\n  function tx(fn){\n    let fd;try{fd=fs.openSync(control+'.lock-'+RUNTIME,'wx',0o600);}catch(e){if(e.code==='EEXIST')return {mutex_busy:true};throw e;}\n    try{const c=read(control,{version:1,lease:null,generation_waiters:[],postprocess_waiters:[]});c.generation_waiters??=[];c.postprocess_waiters??=[];const result=fn(c);write(control,c);return result;}\n    finally{fs.closeSync(fd);fs.unlinkSync(control+'.lock-'+RUNTIME);}\n  }\n  const get=id=>read(jobPath(id),null);\n  const patch=(id,data)=>{const j=get(id);if(!j)throw new Error('Missing job '+id);const index=read(root+'/executions/'+execution+'.json',null);if(index?.request_id===id&&j.execution_id!==execution)throw new Error('Obsolete worker fenced by recovery.');if(j.cancel_requested&&execution===j.execution_id&&data.status&&data.status!=='deleted')data={...data,status:j.status};Object.assign(j,data,{updated_at:new Date().toISOString()});write(jobPath(id),j);return j;};\n  function owned(c,kind){if(c.lease?.owner!==execution||c.lease?.kind!==kind||c.lease.blocked)throw new Error('Comfy reservation is absent or blocked; inspect scheduler before resubmitting.');}\n  return {fs,root,jobs,execution,valid,jobPath,read,write,tx,get,patch,owned,control};\n})();\n\nconst response=$input.first().json;\nconst base=$('Recovery Notice').first().json;\n// n8n Telegram sendMessage preserves the Bot API envelope {ok:true,result:{message_id,...}}.\n// Also accept the unwrapped Message shape used by older exports/test fixtures.\nconst message=response.result??response;\nif(response.error||response.ok===false||!Number.isSafeInteger(message.message_id)||message.message_id<=0)return [];\nS.tx(c=>{\n  if(c.recovery_notice===base.text)c.recovery_notice=null;\n  return {};\n});\nreturn [];"
+      },
+      "id": "d93702da-e85c-5349-aa57-1e43fc6cf6e2",
+      "name": "Acknowledge Recovery Notice",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        8320,
+        2448
+      ]
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes",
+              "minutesInterval": 1
+            }
+          ]
+        }
+      },
+      "name": "Error Alert Schedule",
+      "id": "569f5838-62db-57c4-a81f-36e77a69dd4c",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        5632,
+        2128
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Docker incarnation: a restart gets a new mutex namespace. Old empty locks are not stolen.\nconst RUNTIME=(()=>{const f=require('fs');try{\n const boot=f.readFileSync('/proc/sys/kernel/random/boot_id','utf8').trim();\n const stat=f.readFileSync('/proc/1/stat','utf8');const fields=stat.slice(stat.lastIndexOf(')')+2).split(' ');\n if(!/^[a-f0-9-]{36}$/.test(boot)||!/^\\d+$/.test(fields[19]))throw Error();return boot+'-'+fields[19];\n}catch(_){throw new Error('Recovery requires the configured Linux Docker container (/proc readable).');}})();\n\n// Shared, embedded in Code nodes. Requires only built-in fs and shared /files.\nconst S = (() => {\n  const fs=require('fs');\n  const root='/files/.telegram-ui/scheduler', jobs=root+'/jobs', control=root+'/control.json';\n  fs.mkdirSync(jobs,{recursive:true,mode:0o700});\n  const execution=String($execution.id);\n  const valid=id=>typeof id==='string'&&/^[A-Za-z0-9_-]{1,80}$/.test(id);\n  const jobPath=id=>{if(!valid(id))throw new Error('Invalid request_id');return jobs+'/'+id+'.json';};\n  const read=(p,fallback)=>fs.existsSync(p)?JSON.parse(fs.readFileSync(p,'utf8')):fallback;\n  function write(p,value){\n    const temp=p+'.tmp-'+execution+'-'+Date.now();let fd;\n    try{fd=fs.openSync(temp,'wx',0o600);fs.writeFileSync(fd,JSON.stringify(value));fs.fsyncSync(fd);fs.closeSync(fd);fd=undefined;fs.renameSync(temp,p);}\n    finally{if(fd!==undefined)fs.closeSync(fd);if(fs.existsSync(temp))fs.unlinkSync(temp);}\n  }\n  function tx(fn){\n    let fd;try{fd=fs.openSync(control+'.lock-'+RUNTIME,'wx',0o600);}catch(e){if(e.code==='EEXIST')return {mutex_busy:true};throw e;}\n    try{const c=read(control,{version:1,lease:null,generation_waiters:[],postprocess_waiters:[]});c.generation_waiters??=[];c.postprocess_waiters??=[];const result=fn(c);write(control,c);return result;}\n    finally{fs.closeSync(fd);fs.unlinkSync(control+'.lock-'+RUNTIME);}\n  }\n  const get=id=>read(jobPath(id),null);\n  const patch=(id,data)=>{const j=get(id);if(!j)throw new Error('Missing job '+id);const index=read(root+'/executions/'+execution+'.json',null);if(index?.request_id===id&&j.execution_id!==execution)throw new Error('Obsolete worker fenced by recovery.');if(j.cancel_requested&&execution===j.execution_id&&data.status&&data.status!=='deleted')data={...data,status:j.status};Object.assign(j,data,{updated_at:new Date().toISOString()});write(jobPath(id),j);return j;};\n  function owned(c,kind){if(c.lease?.owner!==execution||c.lease?.kind!==kind||c.lease.blocked)throw new Error('Comfy reservation is absent or blocked; inspect scheduler before resubmitting.');}\n  return {fs,root,jobs,execution,valid,jobPath,read,write,tx,get,patch,owned,control};\n})();\n\n\n\n// Durable error incidents and notification outbox. Built-in fs only; no network/GPU calls.\nconst E=(()=>{\n const fs=S.fs,root=S.root+'/incidents',MAX_ATTEMPTS=5,CLAIM_MS=300000;\n const delays=[60000,300000,900000,3600000];\n const valid=id=>typeof id==='string'&&/^[A-Za-z0-9_-]{1,120}$/.test(id);\n const file=id=>{if(!valid(id))throw new Error('Invalid incident identifier');return root+'/'+id+'.json';};\n function scrub(value,limit=1000){\n  let s=String(value??'').slice(0,12000);\n  try{const key=fs.readFileSync('/files/.telegram-ui/comfy-control.key','utf8').trim();if(key.length>=32)s=s.split(key).join('[REDACTED]');}catch(_){}\n  s=s.replace(/\\b(?:Bearer|Basic)\\s+[A-Za-z0-9_.~+\\/=:-]+/gi,'[REDACTED AUTH]')\n   .replace(/\\b[0-9]{6,}:[A-Za-z0-9_-]{25,}\\b/g,'[REDACTED BOT TOKEN]')\n   .replace(/\\b[a-f0-9]{64}\\b/gi,'[REDACTED KEY]')\n   .replace(/((?:x-ltx-token|x-n8n-recovery-key|authorization|api[_-]?key|access[_-]?token|password|secret|signature)[\"']?\\s*[:=]\\s*[\"']?)[^\\s\"'&,}\\]]+/gi,'$1[REDACTED]')\n   .replace(/([?&](?:token|key|signature|secret)=)[^&#\\s]+/gi,'$1[REDACTED]')\n   .replace(/https?:\\/\\/[^\\s/@]+:[^\\s/@]+@/gi,'https://[REDACTED]@');\n  return s.slice(0,limit);\n }\n const esc=s=>String(s??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');\n function hash(s){let a=2166136261,b=5381;for(const c of s){a=Math.imul(a^c.charCodeAt(0),16777619);b=Math.imul(b,33)^c.charCodeAt(0);}return(a>>>0).toString(16)+(b>>>0).toString(16);}\n function locked(id,fn){\n  const lock=file(id)+'.lock-'+RUNTIME;let fd;\n  try{fd=fs.openSync(lock,'wx',0o600);}catch(e){if(e.code==='EEXIST')return {mutex_busy:true};throw e;}\n  try{return fn();}finally{fs.closeSync(fd);fs.unlinkSync(lock);}\n }\n function stageOf(node,j){\n  if(/Interpolation/i.test(node))return 'interpolation';if(/Upscale|Final Video|Finalizer|Final Checkpoint/i.test(node))return 'upscale';\n  if(/LTX|Generation|Upload Image|First Frame|Workflow JSON/i.test(node))return 'generation';\n  return j?.inflight??({generating:'generation',interpolating:'interpolation',upscaling:'upscale'}[j?.status])??'workflow';\n }\n function codeOf(error){\n  const values=[error?.httpCode,error?.errorDetails?.httpCode,error?.cause?.code,error?.code,error?.cause?.httpCode];\n  return String(values.find(x=>x!==undefined&&x!==null)??'').slice(0,40);\n }\n function classify(summary,code,notification=false){\n  if(notification)return 'notification';\n  if(/out of memory|\\boom\\b|memory allocation|cannot allocate memory|aimdo memory compile error/i.test(summary))return 'resource';\n  if(['401','403'].includes(code)||/unauthorized|forbidden|authentication|invalid.*(?:token|credential)/i.test(summary))return 'authentication';\n  if(/ENOSPC|EACCES|EPERM|disk full|no space left|copy verification|source changed|destination.*different content/i.test(summary))return 'storage';\n  if(/missing_node_type|custom node.*not.*installed|no module named|model.*not found|node .*not found/i.test(summary))return 'dependency';\n  if(/timeout|timed out|ECONNABORTED|ETIMEDOUT/i.test(summary+' '+code))return 'timeout';\n  if(/ECONNREFUSED|ECONNRESET|ENOTFOUND|EAI_AGAIN|socket hang up|connection.*(?:aborted|refused|reset)/i.test(summary+' '+code))return 'connection';\n  if(['400','413','415','422'].includes(code)||/invalid_graph|invalid.*(?:parameter|request|aspect)|validation|payload|template mismatch/i.test(summary))return 'validation';\n  if(/execution_error|execution_interrupted|(?:LTX|interpolation|upscale|finalization) failed|monitoring deadline|history remains unavailable/i.test(summary))return 'processing';\n  return 'unknown';\n }\n function capture(error,handlerId=''){\n  fs.mkdirSync(root,{recursive:true,mode:0o700});\n  const x=error.execution??{},t=error.trigger??{},e=x.error??t.error??{};\n  const execution=/^[0-9]+$/.test(String(x.id??''))?String(x.id):'';\n  const workflowId=scrub(error.workflow?.id??'',80),workflow=scrub(error.workflow?.name??'desconhecido',140);\n  const node=scrub(x.lastNodeExecuted??e.node?.name??'trigger',140);\n  const message=scrub(e.message??'Unknown workflow error',650),description=scrub(e.description??e.cause?.description??e.cause?.message??'',650);\n  const summary=description&&description!==message?message+' — '+description:message;\n  const stamp=String(t.error?.timestamp??Math.floor(Date.now()/3600000));\n  const id=execution?'err-'+execution:'trigger-'+hash([workflowId,workflow,node,summary,stamp].join('|'));\n  return locked(id,()=>{\n   const existing=S.read(file(id),null);if(existing)return {incident:existing,created:false};\n   const index=execution?S.read(S.root+'/executions/'+execution+'.json',null):null;\n   const j=index?.request_id&&S.valid(index.request_id)?S.get(index.request_id):null;\n   const incident={schema_version:2,incident_id:id,created_at:new Date().toISOString(),execution_id:execution,\n    workflow_id:workflowId,workflow_name:workflow,node,request_id:j?.request_id??(S.valid(index?.request_id)?index.request_id:null),stage:stageOf(node,j),\n    error_code:scrub(codeOf(e),40),summary:scrub(summary,1300),category:classify(summary,codeOf(e)),severity:'error',\n    state_applied:false,state_attempts:0,ignored:false,recursive:!!handlerId&&workflowId===handlerId,\n    notification:{state:'pending',attempts:0,next_attempt_at:Date.now(),claim_owner:null,claim_until:0}};\n   S.write(file(id),incident);return {incident,created:true};\n  });\n }\n function apply(id){return locked(id,()=>{\n  let i=S.read(file(id),null);if(!i)return {missing:true};if(i.state_applied)return {incident:i,recorded:true};\n  const result=S.tx(c=>{\n   const execution=i.execution_id,index=execution?S.read(S.root+'/executions/'+execution+'.json',null):null;\n   const j=index?.request_id&&S.valid(index.request_id)?S.get(index.request_id):null;\n   if(i.recursive)return {ignored:'handler_recursion',affected:[],blocked:false};\n   if(j&&(j.cancel_requested||['cancelled','deleted','deleting'].includes(j.status)))return {ignored:'cancelled_worker',affected:[],blocked:false};\n   if(j&&String(j.execution_id)!==execution)return {ignored:'superseded_worker',affected:[],blocked:false};\n   let rejected=false,receipt=null,notification=false,affected=[],stage=i.stage;\n   if(j){\n    affected=[j.request_id];stage=stageOf(i.node,j);\n    const proofStage=j.inflight??(j.last_failure?.incident_id===id?stage:null);\n    if(proofStage){\n     const ticket=j.recovery?.ticket??('original-'+execution),boot=S.read('/files/.telegram-ui/comfy-boot.json',null);\n     const r=S.read('/files/.telegram-ui/submissions/'+j.request_id+'-'+proofStage+'-'+ticket+'.json',null);\n     // Only an explicit rejection receipt for THIS stage, ticket and current boot proves non-admission.\n     if(r?.outcome==='rejected'&&r.intent===false&&r.boot_id&&r.boot_id===boot?.boot_id&&[400,401,403,404,405,413,415,422,429].includes(r.response_status)){\n      rejected=true;receipt={status:r.response_status,type:scrub(r.response?.error?.type??'',100),detail:scrub(r.response?.error?.message??'',500)};\n     }\n    }\n    notification=['finished','rejected'].includes(j.status);\n    const meta={incident_id:id,category:classify(i.summary+' '+(receipt?.detail??'')+' '+(receipt?.type??''),String(receipt?.status??i.error_code),notification),stage,at:new Date().toISOString()};\n    S.patch(j.request_id,notification?{notification_error:i.summary,last_notification_incident:meta}:\n      {status:'failed',error:i.summary,error_node:i.node,submission_rejected:rejected,...(rejected?{inflight:null}:{}),last_failure:meta});\n   }\n   // Never rewrite another worker's waiters or reservation.\n   if(execution){c.postprocess_waiters=c.postprocess_waiters.filter(w=>String(w.owner)!==execution);c.generation_waiters=c.generation_waiters.filter(w=>String(w.owner)!==execution);}\n   let blocked=false,released=false;\n   if(execution&&String(c.lease?.owner)===execution){\n    if(j&&c.lease.request_id===j.request_id&&c.lease.kind==='generation-submit'&&rejected&&!notification){c.lease=null;released=true;}\n    else{c.lease.blocked=true;c.lease.error=i.summary;c.paused=true;blocked=true;}\n   }\n   let trace=null;\n   if(j&&['generation','interpolation','upscale'].includes(stage)){\n    const ticket=j.recovery?.ticket??('original-'+execution);\n    trace=S.read('/files/.telegram-ui/submissions/'+j.request_id+'-'+stage+'-'+ticket+'.json',null);\n   }\n   return {affected,blocked,released,receipt,notification,stage,job_status:j?.status??null,\n    prompt_id:trace?.response?.prompt_id??(j?(stage==='generation'?j.prompt_id:stage==='interpolation'?(j.checkpoint_interpolated?.interpolation_prompt_id??j.checkpoint_approved?.interpolation_prompt_id):j.checkpoint_interpolated?.upscale_initial_prompt_id):null),\n    checkpoint:{video:!!(j?.checkpoint_review?.video??j?.video),interpolation:!!(j?.checkpoint_interpolated?.interpolated_video??j?.interpolated_video),final:!!(j?.final_video??j?.checkpoint_final?.final_video)}};\n  });\n  i.state_attempts=(i.state_attempts??0)+1;\n  if(result.mutex_busy){i.last_state_error='scheduler_mutex_busy';S.write(file(id),i);return {incident:i,mutex_busy:true};}\n  // Commit the incident marker only AFTER the scheduler transaction has committed.\n  i={...i,state_applied:true,state_applied_at:new Date().toISOString(),last_state_error:null,\n   request_id:result.affected?.[0]??i.request_id,stage:result.stage??i.stage,\n   affected_jobs:result.affected??[],ignored:!!result.ignored,ignored_reason:result.ignored??null,\n   reservation_blocked:result.blocked===true,reservation_released:result.released===true,\n   submission_rejected:!!result.receipt,rejection_receipt:result.receipt??null,\n   checkpoint:result.checkpoint??{},job_status_at_failure:result.job_status??null};\n  i.category=classify(i.summary+' '+(result.receipt?.detail??'')+' '+(result.receipt?.type??''),String(result.receipt?.status??i.error_code),result.notification);\n  i.severity=i.reservation_blocked?'critical':'error';\n  i.error_code=String(result.receipt?.status??i.error_code);\n  i.policy=i.reservation_released?'rejected_not_admitted':i.reservation_blocked?'reconcile_before_resubmit':result.notification?'preserve_result':'inspect_execution';\n  i.prompt_id=result.prompt_id??null;\n  if(i.ignored)i.notification={...i.notification,state:'suppressed'};\n  S.write(file(id),i);return {incident:i,recorded:true};\n });}\n const labels={resource:'Memória/recursos do backend',authentication:'Autenticação ou permissão',storage:'Armazenamento/arquivo',dependency:'Modelo ou node indisponível',timeout:'Timeout de comunicação',connection:'Falha de conexão',validation:'Pedido rejeitado/validação',processing:'Falha de processamento/monitoramento',notification:'Falha após conclusão ou decisão',unknown:'Falha não classificada'};\n function render(i){\n  const stage={generation:'geração',interpolation:'interpolação',upscale:'upscale',workflow:'workflow'}[i.stage]??i.stage;\n  let action=i.reservation_blocked?'Confira /status e o Comfy. /recover reconcilia a fila; não repita a geração manualmente.':\n   i.reservation_released?'A reserva de envio foi liberada por rejeição confirmada. Corrija a causa antes de uma nova tentativa.':\n   i.category==='notification'?'O resultado/decisão foi preservado. Confira a execução; não gere novamente só por este aviso.':\n   i.request_id?'Confira /status e a execução antes de /retry.':'Confira a execução indicada; nenhum job foi identificado para alterar.';\n  if(i.category==='resource')action='Confira RAM, VRAM e o log do backend. '+action;\n  if(i.category==='authentication')action='Confira a credencial e os headers do node indicado. '+action;\n  const detail=i.rejection_receipt?.detail?i.summary+' — '+i.rejection_receipt.detail:i.summary;\n  return '⚠️ '+esc(labels[i.category]??labels.unknown)+'\\nIncidente: '+esc(i.incident_id)+'\\nWorkflow: '+esc(i.workflow_name)+\n   '\\nRegistrado: '+esc(i.created_at)+'\\nExecução: '+esc(i.execution_id||'falha no trigger')+'\\nNode: '+esc(i.node)+'\\nJobs: '+esc(i.request_id||'nenhum identificado')+\n   '\\nEtapa: '+esc(stage)+(i.error_code?'\\nCódigo: '+esc(i.error_code):'')+(i.prompt_id?'\\nPrompt: '+esc(i.prompt_id):'')+'\\n'+esc(scrub(detail,1500))+\n   (i.reservation_blocked?'\\nEstado no momento da falha: Fila pausada; uma tarefa pode continuar no Comfy. Reserva preservada.':'')+'\\n'+esc(action);\n }\n function candidates(){\n  if(!fs.existsSync(root))return [];\n  const list=[];\n  for(const n of fs.readdirSync(root).filter(n=>/^[A-Za-z0-9_-]{1,120}\\.json$/.test(n))){\n   try{const i=S.read(root+'/'+n,null);if(i?.schema_version!==2||!valid(i.incident_id)||n!==i.incident_id+'.json')throw Error();list.push(i);}\n   catch(_){console.warn('Error Handler v2: invalid incident file '+n+'; preserved for inspection.');}\n  }\n  return list.sort((a,b)=>String(a.created_at).localeCompare(String(b.created_at))||a.incident_id.localeCompare(b.incident_id));\n }\n function reconcile(){\n  let count=0,busy=0;\n  for(const i of candidates().filter(i=>!i.state_applied).slice(0,10)){try{const r=apply(i.incident_id);if(r.mutex_busy)busy++;else count++;}catch(error){busy++;console.warn('Error Handler v2: pending '+i.incident_id+' could not be reconciled: '+scrub(error.message,200));}}\n  return {reconciled_incidents:count,pending_incidents_busy:busy};\n }\n function claim(id=null){\n  const selected=id?[S.read(file(id),null)].filter(Boolean):candidates();\n  for(const candidate of selected){\n   const r=locked(candidate.incident_id,()=>{\n    const i=S.read(file(candidate.incident_id),null),n=i?.notification,now=Date.now();\n    if(n?.state==='sending'&&n.claim_until<=now&&n.attempts>=MAX_ATTEMPTS){\n     i.notification={...n,state:'attention',claim_owner:null,claim_until:0,last_error:'Final notification delivery unconfirmed after worker interruption.'};S.write(file(i.incident_id),i);return {notify:false};\n    }\n    if(!i?.state_applied||i.ignored||!n||['sent','suppressed','attention'].includes(n.state)||n.attempts>=MAX_ATTEMPTS||n.next_attempt_at>now||n.claim_until>now)return {notify:false};\n    i.notification={...n,state:'sending',attempts:n.attempts+1,claim_owner:S.execution,claim_until:now+CLAIM_MS,last_attempt_at:now};\n    S.write(file(i.incident_id),i);\n    return {notify:true,incident_id:i.incident_id,notification_attempt:i.notification.attempts,notification_owner:S.execution,chat_id:'0',message:render(i)};\n   });\n   if(r.notify)return r;\n  }\n  return {notify:false};\n }\n function acknowledge(base,response){return locked(base.incident_id,()=>{\n  const i=S.read(file(base.incident_id),null),n=i?.notification;\n  if(!n||n.state!=='sending'||n.claim_owner!==base.notification_owner||n.attempts!==base.notification_attempt)return {acknowledged:false,stale:true};\n  const msg=response.result??response;\n  const success=!response.error&&response.ok!==false&&Number.isSafeInteger(msg.message_id)&&msg.message_id>0;\n  if(success){i.notification={...n,state:'sent',sent_at:new Date().toISOString(),telegram_message_id:msg.message_id,claim_owner:null,claim_until:0,last_error:null};}\n  else{\n   const detail=scrub(typeof response.error==='string'?response.error:response.error?.message??response.description??'Telegram did not confirm message_id',500);\n   i.notification={...n,state:n.attempts>=MAX_ATTEMPTS?'attention':'pending',next_attempt_at:Date.now()+delays[Math.min(n.attempts-1,delays.length-1)],claim_owner:null,claim_until:0,last_error:detail};\n  }\n  S.write(file(i.incident_id),i);return {acknowledged:success,incident_id:i.incident_id,notification_state:i.notification.state};\n });}\n return {capture,apply,reconcile,claim,acknowledge,render,scrub,escape:esc,classify,valid,root};\n})();\n\nreturn [{json:E.reconcile()}];\n"
+      },
+      "id": "0ca2fbbd-5c15-59e0-a39f-6429e389b212",
+      "name": "Reconcile Error Incidents",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        5856,
+        2128
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Docker incarnation: a restart gets a new mutex namespace. Old empty locks are not stolen.\nconst RUNTIME=(()=>{const f=require('fs');try{\n const boot=f.readFileSync('/proc/sys/kernel/random/boot_id','utf8').trim();\n const stat=f.readFileSync('/proc/1/stat','utf8');const fields=stat.slice(stat.lastIndexOf(')')+2).split(' ');\n if(!/^[a-f0-9-]{36}$/.test(boot)||!/^\\d+$/.test(fields[19]))throw Error();return boot+'-'+fields[19];\n}catch(_){throw new Error('Recovery requires the configured Linux Docker container (/proc readable).');}})();\n\n// Shared, embedded in Code nodes. Requires only built-in fs and shared /files.\nconst S = (() => {\n  const fs=require('fs');\n  const root='/files/.telegram-ui/scheduler', jobs=root+'/jobs', control=root+'/control.json';\n  fs.mkdirSync(jobs,{recursive:true,mode:0o700});\n  const execution=String($execution.id);\n  const valid=id=>typeof id==='string'&&/^[A-Za-z0-9_-]{1,80}$/.test(id);\n  const jobPath=id=>{if(!valid(id))throw new Error('Invalid request_id');return jobs+'/'+id+'.json';};\n  const read=(p,fallback)=>fs.existsSync(p)?JSON.parse(fs.readFileSync(p,'utf8')):fallback;\n  function write(p,value){\n    const temp=p+'.tmp-'+execution+'-'+Date.now();let fd;\n    try{fd=fs.openSync(temp,'wx',0o600);fs.writeFileSync(fd,JSON.stringify(value));fs.fsyncSync(fd);fs.closeSync(fd);fd=undefined;fs.renameSync(temp,p);}\n    finally{if(fd!==undefined)fs.closeSync(fd);if(fs.existsSync(temp))fs.unlinkSync(temp);}\n  }\n  function tx(fn){\n    let fd;try{fd=fs.openSync(control+'.lock-'+RUNTIME,'wx',0o600);}catch(e){if(e.code==='EEXIST')return {mutex_busy:true};throw e;}\n    try{const c=read(control,{version:1,lease:null,generation_waiters:[],postprocess_waiters:[]});c.generation_waiters??=[];c.postprocess_waiters??=[];const result=fn(c);write(control,c);return result;}\n    finally{fs.closeSync(fd);fs.unlinkSync(control+'.lock-'+RUNTIME);}\n  }\n  const get=id=>read(jobPath(id),null);\n  const patch=(id,data)=>{const j=get(id);if(!j)throw new Error('Missing job '+id);const index=read(root+'/executions/'+execution+'.json',null);if(index?.request_id===id&&j.execution_id!==execution)throw new Error('Obsolete worker fenced by recovery.');if(j.cancel_requested&&execution===j.execution_id&&data.status&&data.status!=='deleted')data={...data,status:j.status};Object.assign(j,data,{updated_at:new Date().toISOString()});write(jobPath(id),j);return j;};\n  function owned(c,kind){if(c.lease?.owner!==execution||c.lease?.kind!==kind||c.lease.blocked)throw new Error('Comfy reservation is absent or blocked; inspect scheduler before resubmitting.');}\n  return {fs,root,jobs,execution,valid,jobPath,read,write,tx,get,patch,owned,control};\n})();\n\n\n\n// Durable error incidents and notification outbox. Built-in fs only; no network/GPU calls.\nconst E=(()=>{\n const fs=S.fs,root=S.root+'/incidents',MAX_ATTEMPTS=5,CLAIM_MS=300000;\n const delays=[60000,300000,900000,3600000];\n const valid=id=>typeof id==='string'&&/^[A-Za-z0-9_-]{1,120}$/.test(id);\n const file=id=>{if(!valid(id))throw new Error('Invalid incident identifier');return root+'/'+id+'.json';};\n function scrub(value,limit=1000){\n  let s=String(value??'').slice(0,12000);\n  try{const key=fs.readFileSync('/files/.telegram-ui/comfy-control.key','utf8').trim();if(key.length>=32)s=s.split(key).join('[REDACTED]');}catch(_){}\n  s=s.replace(/\\b(?:Bearer|Basic)\\s+[A-Za-z0-9_.~+\\/=:-]+/gi,'[REDACTED AUTH]')\n   .replace(/\\b[0-9]{6,}:[A-Za-z0-9_-]{25,}\\b/g,'[REDACTED BOT TOKEN]')\n   .replace(/\\b[a-f0-9]{64}\\b/gi,'[REDACTED KEY]')\n   .replace(/((?:x-ltx-token|x-n8n-recovery-key|authorization|api[_-]?key|access[_-]?token|password|secret|signature)[\"']?\\s*[:=]\\s*[\"']?)[^\\s\"'&,}\\]]+/gi,'$1[REDACTED]')\n   .replace(/([?&](?:token|key|signature|secret)=)[^&#\\s]+/gi,'$1[REDACTED]')\n   .replace(/https?:\\/\\/[^\\s/@]+:[^\\s/@]+@/gi,'https://[REDACTED]@');\n  return s.slice(0,limit);\n }\n const esc=s=>String(s??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');\n function hash(s){let a=2166136261,b=5381;for(const c of s){a=Math.imul(a^c.charCodeAt(0),16777619);b=Math.imul(b,33)^c.charCodeAt(0);}return(a>>>0).toString(16)+(b>>>0).toString(16);}\n function locked(id,fn){\n  const lock=file(id)+'.lock-'+RUNTIME;let fd;\n  try{fd=fs.openSync(lock,'wx',0o600);}catch(e){if(e.code==='EEXIST')return {mutex_busy:true};throw e;}\n  try{return fn();}finally{fs.closeSync(fd);fs.unlinkSync(lock);}\n }\n function stageOf(node,j){\n  if(/Interpolation/i.test(node))return 'interpolation';if(/Upscale|Final Video|Finalizer|Final Checkpoint/i.test(node))return 'upscale';\n  if(/LTX|Generation|Upload Image|First Frame|Workflow JSON/i.test(node))return 'generation';\n  return j?.inflight??({generating:'generation',interpolating:'interpolation',upscaling:'upscale'}[j?.status])??'workflow';\n }\n function codeOf(error){\n  const values=[error?.httpCode,error?.errorDetails?.httpCode,error?.cause?.code,error?.code,error?.cause?.httpCode];\n  return String(values.find(x=>x!==undefined&&x!==null)??'').slice(0,40);\n }\n function classify(summary,code,notification=false){\n  if(notification)return 'notification';\n  if(/out of memory|\\boom\\b|memory allocation|cannot allocate memory|aimdo memory compile error/i.test(summary))return 'resource';\n  if(['401','403'].includes(code)||/unauthorized|forbidden|authentication|invalid.*(?:token|credential)/i.test(summary))return 'authentication';\n  if(/ENOSPC|EACCES|EPERM|disk full|no space left|copy verification|source changed|destination.*different content/i.test(summary))return 'storage';\n  if(/missing_node_type|custom node.*not.*installed|no module named|model.*not found|node .*not found/i.test(summary))return 'dependency';\n  if(/timeout|timed out|ECONNABORTED|ETIMEDOUT/i.test(summary+' '+code))return 'timeout';\n  if(/ECONNREFUSED|ECONNRESET|ENOTFOUND|EAI_AGAIN|socket hang up|connection.*(?:aborted|refused|reset)/i.test(summary+' '+code))return 'connection';\n  if(['400','413','415','422'].includes(code)||/invalid_graph|invalid.*(?:parameter|request|aspect)|validation|payload|template mismatch/i.test(summary))return 'validation';\n  if(/execution_error|execution_interrupted|(?:LTX|interpolation|upscale|finalization) failed|monitoring deadline|history remains unavailable/i.test(summary))return 'processing';\n  return 'unknown';\n }\n function capture(error,handlerId=''){\n  fs.mkdirSync(root,{recursive:true,mode:0o700});\n  const x=error.execution??{},t=error.trigger??{},e=x.error??t.error??{};\n  const execution=/^[0-9]+$/.test(String(x.id??''))?String(x.id):'';\n  const workflowId=scrub(error.workflow?.id??'',80),workflow=scrub(error.workflow?.name??'desconhecido',140);\n  const node=scrub(x.lastNodeExecuted??e.node?.name??'trigger',140);\n  const message=scrub(e.message??'Unknown workflow error',650),description=scrub(e.description??e.cause?.description??e.cause?.message??'',650);\n  const summary=description&&description!==message?message+' — '+description:message;\n  const stamp=String(t.error?.timestamp??Math.floor(Date.now()/3600000));\n  const id=execution?'err-'+execution:'trigger-'+hash([workflowId,workflow,node,summary,stamp].join('|'));\n  return locked(id,()=>{\n   const existing=S.read(file(id),null);if(existing)return {incident:existing,created:false};\n   const index=execution?S.read(S.root+'/executions/'+execution+'.json',null):null;\n   const j=index?.request_id&&S.valid(index.request_id)?S.get(index.request_id):null;\n   const incident={schema_version:2,incident_id:id,created_at:new Date().toISOString(),execution_id:execution,\n    workflow_id:workflowId,workflow_name:workflow,node,request_id:j?.request_id??(S.valid(index?.request_id)?index.request_id:null),stage:stageOf(node,j),\n    error_code:scrub(codeOf(e),40),summary:scrub(summary,1300),category:classify(summary,codeOf(e)),severity:'error',\n    state_applied:false,state_attempts:0,ignored:false,recursive:!!handlerId&&workflowId===handlerId,\n    notification:{state:'pending',attempts:0,next_attempt_at:Date.now(),claim_owner:null,claim_until:0}};\n   S.write(file(id),incident);return {incident,created:true};\n  });\n }\n function apply(id){return locked(id,()=>{\n  let i=S.read(file(id),null);if(!i)return {missing:true};if(i.state_applied)return {incident:i,recorded:true};\n  const result=S.tx(c=>{\n   const execution=i.execution_id,index=execution?S.read(S.root+'/executions/'+execution+'.json',null):null;\n   const j=index?.request_id&&S.valid(index.request_id)?S.get(index.request_id):null;\n   if(i.recursive)return {ignored:'handler_recursion',affected:[],blocked:false};\n   if(j&&(j.cancel_requested||['cancelled','deleted','deleting'].includes(j.status)))return {ignored:'cancelled_worker',affected:[],blocked:false};\n   if(j&&String(j.execution_id)!==execution)return {ignored:'superseded_worker',affected:[],blocked:false};\n   let rejected=false,receipt=null,notification=false,affected=[],stage=i.stage;\n   if(j){\n    affected=[j.request_id];stage=stageOf(i.node,j);\n    const proofStage=j.inflight??(j.last_failure?.incident_id===id?stage:null);\n    if(proofStage){\n     const ticket=j.recovery?.ticket??('original-'+execution),boot=S.read('/files/.telegram-ui/comfy-boot.json',null);\n     const r=S.read('/files/.telegram-ui/submissions/'+j.request_id+'-'+proofStage+'-'+ticket+'.json',null);\n     // Only an explicit rejection receipt for THIS stage, ticket and current boot proves non-admission.\n     if(r?.outcome==='rejected'&&r.intent===false&&r.boot_id&&r.boot_id===boot?.boot_id&&[400,401,403,404,405,413,415,422,429].includes(r.response_status)){\n      rejected=true;receipt={status:r.response_status,type:scrub(r.response?.error?.type??'',100),detail:scrub(r.response?.error?.message??'',500)};\n     }\n    }\n    notification=['finished','rejected'].includes(j.status);\n    const meta={incident_id:id,category:classify(i.summary+' '+(receipt?.detail??'')+' '+(receipt?.type??''),String(receipt?.status??i.error_code),notification),stage,at:new Date().toISOString()};\n    S.patch(j.request_id,notification?{notification_error:i.summary,last_notification_incident:meta}:\n      {status:'failed',error:i.summary,error_node:i.node,submission_rejected:rejected,...(rejected?{inflight:null}:{}),last_failure:meta});\n   }\n   // Never rewrite another worker's waiters or reservation.\n   if(execution){c.postprocess_waiters=c.postprocess_waiters.filter(w=>String(w.owner)!==execution);c.generation_waiters=c.generation_waiters.filter(w=>String(w.owner)!==execution);}\n   let blocked=false,released=false;\n   if(execution&&String(c.lease?.owner)===execution){\n    if(j&&c.lease.request_id===j.request_id&&c.lease.kind==='generation-submit'&&rejected&&!notification){c.lease=null;released=true;}\n    else{c.lease.blocked=true;c.lease.error=i.summary;c.paused=true;blocked=true;}\n   }\n   let trace=null;\n   if(j&&['generation','interpolation','upscale'].includes(stage)){\n    const ticket=j.recovery?.ticket??('original-'+execution);\n    trace=S.read('/files/.telegram-ui/submissions/'+j.request_id+'-'+stage+'-'+ticket+'.json',null);\n   }\n   return {affected,blocked,released,receipt,notification,stage,job_status:j?.status??null,\n    prompt_id:trace?.response?.prompt_id??(j?(stage==='generation'?j.prompt_id:stage==='interpolation'?(j.checkpoint_interpolated?.interpolation_prompt_id??j.checkpoint_approved?.interpolation_prompt_id):j.checkpoint_interpolated?.upscale_initial_prompt_id):null),\n    checkpoint:{video:!!(j?.checkpoint_review?.video??j?.video),interpolation:!!(j?.checkpoint_interpolated?.interpolated_video??j?.interpolated_video),final:!!(j?.final_video??j?.checkpoint_final?.final_video)}};\n  });\n  i.state_attempts=(i.state_attempts??0)+1;\n  if(result.mutex_busy){i.last_state_error='scheduler_mutex_busy';S.write(file(id),i);return {incident:i,mutex_busy:true};}\n  // Commit the incident marker only AFTER the scheduler transaction has committed.\n  i={...i,state_applied:true,state_applied_at:new Date().toISOString(),last_state_error:null,\n   request_id:result.affected?.[0]??i.request_id,stage:result.stage??i.stage,\n   affected_jobs:result.affected??[],ignored:!!result.ignored,ignored_reason:result.ignored??null,\n   reservation_blocked:result.blocked===true,reservation_released:result.released===true,\n   submission_rejected:!!result.receipt,rejection_receipt:result.receipt??null,\n   checkpoint:result.checkpoint??{},job_status_at_failure:result.job_status??null};\n  i.category=classify(i.summary+' '+(result.receipt?.detail??'')+' '+(result.receipt?.type??''),String(result.receipt?.status??i.error_code),result.notification);\n  i.severity=i.reservation_blocked?'critical':'error';\n  i.error_code=String(result.receipt?.status??i.error_code);\n  i.policy=i.reservation_released?'rejected_not_admitted':i.reservation_blocked?'reconcile_before_resubmit':result.notification?'preserve_result':'inspect_execution';\n  i.prompt_id=result.prompt_id??null;\n  if(i.ignored)i.notification={...i.notification,state:'suppressed'};\n  S.write(file(id),i);return {incident:i,recorded:true};\n });}\n const labels={resource:'Memória/recursos do backend',authentication:'Autenticação ou permissão',storage:'Armazenamento/arquivo',dependency:'Modelo ou node indisponível',timeout:'Timeout de comunicação',connection:'Falha de conexão',validation:'Pedido rejeitado/validação',processing:'Falha de processamento/monitoramento',notification:'Falha após conclusão ou decisão',unknown:'Falha não classificada'};\n function render(i){\n  const stage={generation:'geração',interpolation:'interpolação',upscale:'upscale',workflow:'workflow'}[i.stage]??i.stage;\n  let action=i.reservation_blocked?'Confira /status e o Comfy. /recover reconcilia a fila; não repita a geração manualmente.':\n   i.reservation_released?'A reserva de envio foi liberada por rejeição confirmada. Corrija a causa antes de uma nova tentativa.':\n   i.category==='notification'?'O resultado/decisão foi preservado. Confira a execução; não gere novamente só por este aviso.':\n   i.request_id?'Confira /status e a execução antes de /retry.':'Confira a execução indicada; nenhum job foi identificado para alterar.';\n  if(i.category==='resource')action='Confira RAM, VRAM e o log do backend. '+action;\n  if(i.category==='authentication')action='Confira a credencial e os headers do node indicado. '+action;\n  const detail=i.rejection_receipt?.detail?i.summary+' — '+i.rejection_receipt.detail:i.summary;\n  return '⚠️ '+esc(labels[i.category]??labels.unknown)+'\\nIncidente: '+esc(i.incident_id)+'\\nWorkflow: '+esc(i.workflow_name)+\n   '\\nRegistrado: '+esc(i.created_at)+'\\nExecução: '+esc(i.execution_id||'falha no trigger')+'\\nNode: '+esc(i.node)+'\\nJobs: '+esc(i.request_id||'nenhum identificado')+\n   '\\nEtapa: '+esc(stage)+(i.error_code?'\\nCódigo: '+esc(i.error_code):'')+(i.prompt_id?'\\nPrompt: '+esc(i.prompt_id):'')+'\\n'+esc(scrub(detail,1500))+\n   (i.reservation_blocked?'\\nEstado no momento da falha: Fila pausada; uma tarefa pode continuar no Comfy. Reserva preservada.':'')+'\\n'+esc(action);\n }\n function candidates(){\n  if(!fs.existsSync(root))return [];\n  const list=[];\n  for(const n of fs.readdirSync(root).filter(n=>/^[A-Za-z0-9_-]{1,120}\\.json$/.test(n))){\n   try{const i=S.read(root+'/'+n,null);if(i?.schema_version!==2||!valid(i.incident_id)||n!==i.incident_id+'.json')throw Error();list.push(i);}\n   catch(_){console.warn('Error Handler v2: invalid incident file '+n+'; preserved for inspection.');}\n  }\n  return list.sort((a,b)=>String(a.created_at).localeCompare(String(b.created_at))||a.incident_id.localeCompare(b.incident_id));\n }\n function reconcile(){\n  let count=0,busy=0;\n  for(const i of candidates().filter(i=>!i.state_applied).slice(0,10)){try{const r=apply(i.incident_id);if(r.mutex_busy)busy++;else count++;}catch(error){busy++;console.warn('Error Handler v2: pending '+i.incident_id+' could not be reconciled: '+scrub(error.message,200));}}\n  return {reconciled_incidents:count,pending_incidents_busy:busy};\n }\n function claim(id=null){\n  const selected=id?[S.read(file(id),null)].filter(Boolean):candidates();\n  for(const candidate of selected){\n   const r=locked(candidate.incident_id,()=>{\n    const i=S.read(file(candidate.incident_id),null),n=i?.notification,now=Date.now();\n    if(n?.state==='sending'&&n.claim_until<=now&&n.attempts>=MAX_ATTEMPTS){\n     i.notification={...n,state:'attention',claim_owner:null,claim_until:0,last_error:'Final notification delivery unconfirmed after worker interruption.'};S.write(file(i.incident_id),i);return {notify:false};\n    }\n    if(!i?.state_applied||i.ignored||!n||['sent','suppressed','attention'].includes(n.state)||n.attempts>=MAX_ATTEMPTS||n.next_attempt_at>now||n.claim_until>now)return {notify:false};\n    i.notification={...n,state:'sending',attempts:n.attempts+1,claim_owner:S.execution,claim_until:now+CLAIM_MS,last_attempt_at:now};\n    S.write(file(i.incident_id),i);\n    return {notify:true,incident_id:i.incident_id,notification_attempt:i.notification.attempts,notification_owner:S.execution,chat_id:'0',message:render(i)};\n   });\n   if(r.notify)return r;\n  }\n  return {notify:false};\n }\n function acknowledge(base,response){return locked(base.incident_id,()=>{\n  const i=S.read(file(base.incident_id),null),n=i?.notification;\n  if(!n||n.state!=='sending'||n.claim_owner!==base.notification_owner||n.attempts!==base.notification_attempt)return {acknowledged:false,stale:true};\n  const msg=response.result??response;\n  const success=!response.error&&response.ok!==false&&Number.isSafeInteger(msg.message_id)&&msg.message_id>0;\n  if(success){i.notification={...n,state:'sent',sent_at:new Date().toISOString(),telegram_message_id:msg.message_id,claim_owner:null,claim_until:0,last_error:null};}\n  else{\n   const detail=scrub(typeof response.error==='string'?response.error:response.error?.message??response.description??'Telegram did not confirm message_id',500);\n   i.notification={...n,state:n.attempts>=MAX_ATTEMPTS?'attention':'pending',next_attempt_at:Date.now()+delays[Math.min(n.attempts-1,delays.length-1)],claim_owner:null,claim_until:0,last_error:detail};\n  }\n  S.write(file(i.incident_id),i);return {acknowledged:success,incident_id:i.incident_id,notification_state:i.notification.state};\n });}\n return {capture,apply,reconcile,claim,acknowledge,render,scrub,escape:esc,classify,valid,root};\n})();\n\nconst input=$input.first().json;\nif(input.persistence_failed)return [{json:{notify:true,untracked:true,chat_id:input.chat_id,message:input.message}}];\nif(input.deferred)return [{json:{notify:false,deferred:true}}];\nreturn [{json:E.claim(input.incident_id??null)}];\n"
+      },
+      "id": "5a4e0758-b340-5bda-ab76-dc6f8f891b7d",
+      "name": "Claim Error Notice",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        6080,
+        2128
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "750fa79e-13e8-4645-8248-a3db0939ffdb",
+              "leftValue": "={{ $json.notify === true }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "08cad26b-039c-5c57-bd19-7270a63a5559",
+      "name": "Error Notice Required?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        6304,
+        2128
+      ]
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json.chat_id }}",
+        "text": "={{ $json.message }}",
+        "additionalFields": {
+          "appendAttribution": false,
+          "parse_mode": "HTML"
+        }
+      },
+      "name": "Notify Error Retry",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "id": "afa311f7-9c93-55ad-a950-5ea073d0cb07",
+      "position": [
+        6528,
+        2128
+      ],
+      "retryOnFail": false,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Docker incarnation: a restart gets a new mutex namespace. Old empty locks are not stolen.\nconst RUNTIME=(()=>{const f=require('fs');try{\n const boot=f.readFileSync('/proc/sys/kernel/random/boot_id','utf8').trim();\n const stat=f.readFileSync('/proc/1/stat','utf8');const fields=stat.slice(stat.lastIndexOf(')')+2).split(' ');\n if(!/^[a-f0-9-]{36}$/.test(boot)||!/^\\d+$/.test(fields[19]))throw Error();return boot+'-'+fields[19];\n}catch(_){throw new Error('Recovery requires the configured Linux Docker container (/proc readable).');}})();\n\n// Shared, embedded in Code nodes. Requires only built-in fs and shared /files.\nconst S = (() => {\n  const fs=require('fs');\n  const root='/files/.telegram-ui/scheduler', jobs=root+'/jobs', control=root+'/control.json';\n  fs.mkdirSync(jobs,{recursive:true,mode:0o700});\n  const execution=String($execution.id);\n  const valid=id=>typeof id==='string'&&/^[A-Za-z0-9_-]{1,80}$/.test(id);\n  const jobPath=id=>{if(!valid(id))throw new Error('Invalid request_id');return jobs+'/'+id+'.json';};\n  const read=(p,fallback)=>fs.existsSync(p)?JSON.parse(fs.readFileSync(p,'utf8')):fallback;\n  function write(p,value){\n    const temp=p+'.tmp-'+execution+'-'+Date.now();let fd;\n    try{fd=fs.openSync(temp,'wx',0o600);fs.writeFileSync(fd,JSON.stringify(value));fs.fsyncSync(fd);fs.closeSync(fd);fd=undefined;fs.renameSync(temp,p);}\n    finally{if(fd!==undefined)fs.closeSync(fd);if(fs.existsSync(temp))fs.unlinkSync(temp);}\n  }\n  function tx(fn){\n    let fd;try{fd=fs.openSync(control+'.lock-'+RUNTIME,'wx',0o600);}catch(e){if(e.code==='EEXIST')return {mutex_busy:true};throw e;}\n    try{const c=read(control,{version:1,lease:null,generation_waiters:[],postprocess_waiters:[]});c.generation_waiters??=[];c.postprocess_waiters??=[];const result=fn(c);write(control,c);return result;}\n    finally{fs.closeSync(fd);fs.unlinkSync(control+'.lock-'+RUNTIME);}\n  }\n  const get=id=>read(jobPath(id),null);\n  const patch=(id,data)=>{const j=get(id);if(!j)throw new Error('Missing job '+id);const index=read(root+'/executions/'+execution+'.json',null);if(index?.request_id===id&&j.execution_id!==execution)throw new Error('Obsolete worker fenced by recovery.');if(j.cancel_requested&&execution===j.execution_id&&data.status&&data.status!=='deleted')data={...data,status:j.status};Object.assign(j,data,{updated_at:new Date().toISOString()});write(jobPath(id),j);return j;};\n  function owned(c,kind){if(c.lease?.owner!==execution||c.lease?.kind!==kind||c.lease.blocked)throw new Error('Comfy reservation is absent or blocked; inspect scheduler before resubmitting.');}\n  return {fs,root,jobs,execution,valid,jobPath,read,write,tx,get,patch,owned,control};\n})();\n\n\n\n// Durable error incidents and notification outbox. Built-in fs only; no network/GPU calls.\nconst E=(()=>{\n const fs=S.fs,root=S.root+'/incidents',MAX_ATTEMPTS=5,CLAIM_MS=300000;\n const delays=[60000,300000,900000,3600000];\n const valid=id=>typeof id==='string'&&/^[A-Za-z0-9_-]{1,120}$/.test(id);\n const file=id=>{if(!valid(id))throw new Error('Invalid incident identifier');return root+'/'+id+'.json';};\n function scrub(value,limit=1000){\n  let s=String(value??'').slice(0,12000);\n  try{const key=fs.readFileSync('/files/.telegram-ui/comfy-control.key','utf8').trim();if(key.length>=32)s=s.split(key).join('[REDACTED]');}catch(_){}\n  s=s.replace(/\\b(?:Bearer|Basic)\\s+[A-Za-z0-9_.~+\\/=:-]+/gi,'[REDACTED AUTH]')\n   .replace(/\\b[0-9]{6,}:[A-Za-z0-9_-]{25,}\\b/g,'[REDACTED BOT TOKEN]')\n   .replace(/\\b[a-f0-9]{64}\\b/gi,'[REDACTED KEY]')\n   .replace(/((?:x-ltx-token|x-n8n-recovery-key|authorization|api[_-]?key|access[_-]?token|password|secret|signature)[\"']?\\s*[:=]\\s*[\"']?)[^\\s\"'&,}\\]]+/gi,'$1[REDACTED]')\n   .replace(/([?&](?:token|key|signature|secret)=)[^&#\\s]+/gi,'$1[REDACTED]')\n   .replace(/https?:\\/\\/[^\\s/@]+:[^\\s/@]+@/gi,'https://[REDACTED]@');\n  return s.slice(0,limit);\n }\n const esc=s=>String(s??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');\n function hash(s){let a=2166136261,b=5381;for(const c of s){a=Math.imul(a^c.charCodeAt(0),16777619);b=Math.imul(b,33)^c.charCodeAt(0);}return(a>>>0).toString(16)+(b>>>0).toString(16);}\n function locked(id,fn){\n  const lock=file(id)+'.lock-'+RUNTIME;let fd;\n  try{fd=fs.openSync(lock,'wx',0o600);}catch(e){if(e.code==='EEXIST')return {mutex_busy:true};throw e;}\n  try{return fn();}finally{fs.closeSync(fd);fs.unlinkSync(lock);}\n }\n function stageOf(node,j){\n  if(/Interpolation/i.test(node))return 'interpolation';if(/Upscale|Final Video|Finalizer|Final Checkpoint/i.test(node))return 'upscale';\n  if(/LTX|Generation|Upload Image|First Frame|Workflow JSON/i.test(node))return 'generation';\n  return j?.inflight??({generating:'generation',interpolating:'interpolation',upscaling:'upscale'}[j?.status])??'workflow';\n }\n function codeOf(error){\n  const values=[error?.httpCode,error?.errorDetails?.httpCode,error?.cause?.code,error?.code,error?.cause?.httpCode];\n  return String(values.find(x=>x!==undefined&&x!==null)??'').slice(0,40);\n }\n function classify(summary,code,notification=false){\n  if(notification)return 'notification';\n  if(/out of memory|\\boom\\b|memory allocation|cannot allocate memory|aimdo memory compile error/i.test(summary))return 'resource';\n  if(['401','403'].includes(code)||/unauthorized|forbidden|authentication|invalid.*(?:token|credential)/i.test(summary))return 'authentication';\n  if(/ENOSPC|EACCES|EPERM|disk full|no space left|copy verification|source changed|destination.*different content/i.test(summary))return 'storage';\n  if(/missing_node_type|custom node.*not.*installed|no module named|model.*not found|node .*not found/i.test(summary))return 'dependency';\n  if(/timeout|timed out|ECONNABORTED|ETIMEDOUT/i.test(summary+' '+code))return 'timeout';\n  if(/ECONNREFUSED|ECONNRESET|ENOTFOUND|EAI_AGAIN|socket hang up|connection.*(?:aborted|refused|reset)/i.test(summary+' '+code))return 'connection';\n  if(['400','413','415','422'].includes(code)||/invalid_graph|invalid.*(?:parameter|request|aspect)|validation|payload|template mismatch/i.test(summary))return 'validation';\n  if(/execution_error|execution_interrupted|(?:LTX|interpolation|upscale|finalization) failed|monitoring deadline|history remains unavailable/i.test(summary))return 'processing';\n  return 'unknown';\n }\n function capture(error,handlerId=''){\n  fs.mkdirSync(root,{recursive:true,mode:0o700});\n  const x=error.execution??{},t=error.trigger??{},e=x.error??t.error??{};\n  const execution=/^[0-9]+$/.test(String(x.id??''))?String(x.id):'';\n  const workflowId=scrub(error.workflow?.id??'',80),workflow=scrub(error.workflow?.name??'desconhecido',140);\n  const node=scrub(x.lastNodeExecuted??e.node?.name??'trigger',140);\n  const message=scrub(e.message??'Unknown workflow error',650),description=scrub(e.description??e.cause?.description??e.cause?.message??'',650);\n  const summary=description&&description!==message?message+' — '+description:message;\n  const stamp=String(t.error?.timestamp??Math.floor(Date.now()/3600000));\n  const id=execution?'err-'+execution:'trigger-'+hash([workflowId,workflow,node,summary,stamp].join('|'));\n  return locked(id,()=>{\n   const existing=S.read(file(id),null);if(existing)return {incident:existing,created:false};\n   const index=execution?S.read(S.root+'/executions/'+execution+'.json',null):null;\n   const j=index?.request_id&&S.valid(index.request_id)?S.get(index.request_id):null;\n   const incident={schema_version:2,incident_id:id,created_at:new Date().toISOString(),execution_id:execution,\n    workflow_id:workflowId,workflow_name:workflow,node,request_id:j?.request_id??(S.valid(index?.request_id)?index.request_id:null),stage:stageOf(node,j),\n    error_code:scrub(codeOf(e),40),summary:scrub(summary,1300),category:classify(summary,codeOf(e)),severity:'error',\n    state_applied:false,state_attempts:0,ignored:false,recursive:!!handlerId&&workflowId===handlerId,\n    notification:{state:'pending',attempts:0,next_attempt_at:Date.now(),claim_owner:null,claim_until:0}};\n   S.write(file(id),incident);return {incident,created:true};\n  });\n }\n function apply(id){return locked(id,()=>{\n  let i=S.read(file(id),null);if(!i)return {missing:true};if(i.state_applied)return {incident:i,recorded:true};\n  const result=S.tx(c=>{\n   const execution=i.execution_id,index=execution?S.read(S.root+'/executions/'+execution+'.json',null):null;\n   const j=index?.request_id&&S.valid(index.request_id)?S.get(index.request_id):null;\n   if(i.recursive)return {ignored:'handler_recursion',affected:[],blocked:false};\n   if(j&&(j.cancel_requested||['cancelled','deleted','deleting'].includes(j.status)))return {ignored:'cancelled_worker',affected:[],blocked:false};\n   if(j&&String(j.execution_id)!==execution)return {ignored:'superseded_worker',affected:[],blocked:false};\n   let rejected=false,receipt=null,notification=false,affected=[],stage=i.stage;\n   if(j){\n    affected=[j.request_id];stage=stageOf(i.node,j);\n    const proofStage=j.inflight??(j.last_failure?.incident_id===id?stage:null);\n    if(proofStage){\n     const ticket=j.recovery?.ticket??('original-'+execution),boot=S.read('/files/.telegram-ui/comfy-boot.json',null);\n     const r=S.read('/files/.telegram-ui/submissions/'+j.request_id+'-'+proofStage+'-'+ticket+'.json',null);\n     // Only an explicit rejection receipt for THIS stage, ticket and current boot proves non-admission.\n     if(r?.outcome==='rejected'&&r.intent===false&&r.boot_id&&r.boot_id===boot?.boot_id&&[400,401,403,404,405,413,415,422,429].includes(r.response_status)){\n      rejected=true;receipt={status:r.response_status,type:scrub(r.response?.error?.type??'',100),detail:scrub(r.response?.error?.message??'',500)};\n     }\n    }\n    notification=['finished','rejected'].includes(j.status);\n    const meta={incident_id:id,category:classify(i.summary+' '+(receipt?.detail??'')+' '+(receipt?.type??''),String(receipt?.status??i.error_code),notification),stage,at:new Date().toISOString()};\n    S.patch(j.request_id,notification?{notification_error:i.summary,last_notification_incident:meta}:\n      {status:'failed',error:i.summary,error_node:i.node,submission_rejected:rejected,...(rejected?{inflight:null}:{}),last_failure:meta});\n   }\n   // Never rewrite another worker's waiters or reservation.\n   if(execution){c.postprocess_waiters=c.postprocess_waiters.filter(w=>String(w.owner)!==execution);c.generation_waiters=c.generation_waiters.filter(w=>String(w.owner)!==execution);}\n   let blocked=false,released=false;\n   if(execution&&String(c.lease?.owner)===execution){\n    if(j&&c.lease.request_id===j.request_id&&c.lease.kind==='generation-submit'&&rejected&&!notification){c.lease=null;released=true;}\n    else{c.lease.blocked=true;c.lease.error=i.summary;c.paused=true;blocked=true;}\n   }\n   let trace=null;\n   if(j&&['generation','interpolation','upscale'].includes(stage)){\n    const ticket=j.recovery?.ticket??('original-'+execution);\n    trace=S.read('/files/.telegram-ui/submissions/'+j.request_id+'-'+stage+'-'+ticket+'.json',null);\n   }\n   return {affected,blocked,released,receipt,notification,stage,job_status:j?.status??null,\n    prompt_id:trace?.response?.prompt_id??(j?(stage==='generation'?j.prompt_id:stage==='interpolation'?(j.checkpoint_interpolated?.interpolation_prompt_id??j.checkpoint_approved?.interpolation_prompt_id):j.checkpoint_interpolated?.upscale_initial_prompt_id):null),\n    checkpoint:{video:!!(j?.checkpoint_review?.video??j?.video),interpolation:!!(j?.checkpoint_interpolated?.interpolated_video??j?.interpolated_video),final:!!(j?.final_video??j?.checkpoint_final?.final_video)}};\n  });\n  i.state_attempts=(i.state_attempts??0)+1;\n  if(result.mutex_busy){i.last_state_error='scheduler_mutex_busy';S.write(file(id),i);return {incident:i,mutex_busy:true};}\n  // Commit the incident marker only AFTER the scheduler transaction has committed.\n  i={...i,state_applied:true,state_applied_at:new Date().toISOString(),last_state_error:null,\n   request_id:result.affected?.[0]??i.request_id,stage:result.stage??i.stage,\n   affected_jobs:result.affected??[],ignored:!!result.ignored,ignored_reason:result.ignored??null,\n   reservation_blocked:result.blocked===true,reservation_released:result.released===true,\n   submission_rejected:!!result.receipt,rejection_receipt:result.receipt??null,\n   checkpoint:result.checkpoint??{},job_status_at_failure:result.job_status??null};\n  i.category=classify(i.summary+' '+(result.receipt?.detail??'')+' '+(result.receipt?.type??''),String(result.receipt?.status??i.error_code),result.notification);\n  i.severity=i.reservation_blocked?'critical':'error';\n  i.error_code=String(result.receipt?.status??i.error_code);\n  i.policy=i.reservation_released?'rejected_not_admitted':i.reservation_blocked?'reconcile_before_resubmit':result.notification?'preserve_result':'inspect_execution';\n  i.prompt_id=result.prompt_id??null;\n  if(i.ignored)i.notification={...i.notification,state:'suppressed'};\n  S.write(file(id),i);return {incident:i,recorded:true};\n });}\n const labels={resource:'Memória/recursos do backend',authentication:'Autenticação ou permissão',storage:'Armazenamento/arquivo',dependency:'Modelo ou node indisponível',timeout:'Timeout de comunicação',connection:'Falha de conexão',validation:'Pedido rejeitado/validação',processing:'Falha de processamento/monitoramento',notification:'Falha após conclusão ou decisão',unknown:'Falha não classificada'};\n function render(i){\n  const stage={generation:'geração',interpolation:'interpolação',upscale:'upscale',workflow:'workflow'}[i.stage]??i.stage;\n  let action=i.reservation_blocked?'Confira /status e o Comfy. /recover reconcilia a fila; não repita a geração manualmente.':\n   i.reservation_released?'A reserva de envio foi liberada por rejeição confirmada. Corrija a causa antes de uma nova tentativa.':\n   i.category==='notification'?'O resultado/decisão foi preservado. Confira a execução; não gere novamente só por este aviso.':\n   i.request_id?'Confira /status e a execução antes de /retry.':'Confira a execução indicada; nenhum job foi identificado para alterar.';\n  if(i.category==='resource')action='Confira RAM, VRAM e o log do backend. '+action;\n  if(i.category==='authentication')action='Confira a credencial e os headers do node indicado. '+action;\n  const detail=i.rejection_receipt?.detail?i.summary+' — '+i.rejection_receipt.detail:i.summary;\n  return '⚠️ '+esc(labels[i.category]??labels.unknown)+'\\nIncidente: '+esc(i.incident_id)+'\\nWorkflow: '+esc(i.workflow_name)+\n   '\\nRegistrado: '+esc(i.created_at)+'\\nExecução: '+esc(i.execution_id||'falha no trigger')+'\\nNode: '+esc(i.node)+'\\nJobs: '+esc(i.request_id||'nenhum identificado')+\n   '\\nEtapa: '+esc(stage)+(i.error_code?'\\nCódigo: '+esc(i.error_code):'')+(i.prompt_id?'\\nPrompt: '+esc(i.prompt_id):'')+'\\n'+esc(scrub(detail,1500))+\n   (i.reservation_blocked?'\\nEstado no momento da falha: Fila pausada; uma tarefa pode continuar no Comfy. Reserva preservada.':'')+'\\n'+esc(action);\n }\n function candidates(){\n  if(!fs.existsSync(root))return [];\n  const list=[];\n  for(const n of fs.readdirSync(root).filter(n=>/^[A-Za-z0-9_-]{1,120}\\.json$/.test(n))){\n   try{const i=S.read(root+'/'+n,null);if(i?.schema_version!==2||!valid(i.incident_id)||n!==i.incident_id+'.json')throw Error();list.push(i);}\n   catch(_){console.warn('Error Handler v2: invalid incident file '+n+'; preserved for inspection.');}\n  }\n  return list.sort((a,b)=>String(a.created_at).localeCompare(String(b.created_at))||a.incident_id.localeCompare(b.incident_id));\n }\n function reconcile(){\n  let count=0,busy=0;\n  for(const i of candidates().filter(i=>!i.state_applied).slice(0,10)){try{const r=apply(i.incident_id);if(r.mutex_busy)busy++;else count++;}catch(error){busy++;console.warn('Error Handler v2: pending '+i.incident_id+' could not be reconciled: '+scrub(error.message,200));}}\n  return {reconciled_incidents:count,pending_incidents_busy:busy};\n }\n function claim(id=null){\n  const selected=id?[S.read(file(id),null)].filter(Boolean):candidates();\n  for(const candidate of selected){\n   const r=locked(candidate.incident_id,()=>{\n    const i=S.read(file(candidate.incident_id),null),n=i?.notification,now=Date.now();\n    if(n?.state==='sending'&&n.claim_until<=now&&n.attempts>=MAX_ATTEMPTS){\n     i.notification={...n,state:'attention',claim_owner:null,claim_until:0,last_error:'Final notification delivery unconfirmed after worker interruption.'};S.write(file(i.incident_id),i);return {notify:false};\n    }\n    if(!i?.state_applied||i.ignored||!n||['sent','suppressed','attention'].includes(n.state)||n.attempts>=MAX_ATTEMPTS||n.next_attempt_at>now||n.claim_until>now)return {notify:false};\n    i.notification={...n,state:'sending',attempts:n.attempts+1,claim_owner:S.execution,claim_until:now+CLAIM_MS,last_attempt_at:now};\n    S.write(file(i.incident_id),i);\n    return {notify:true,incident_id:i.incident_id,notification_attempt:i.notification.attempts,notification_owner:S.execution,chat_id:'0',message:render(i)};\n   });\n   if(r.notify)return r;\n  }\n  return {notify:false};\n }\n function acknowledge(base,response){return locked(base.incident_id,()=>{\n  const i=S.read(file(base.incident_id),null),n=i?.notification;\n  if(!n||n.state!=='sending'||n.claim_owner!==base.notification_owner||n.attempts!==base.notification_attempt)return {acknowledged:false,stale:true};\n  const msg=response.result??response;\n  const success=!response.error&&response.ok!==false&&Number.isSafeInteger(msg.message_id)&&msg.message_id>0;\n  if(success){i.notification={...n,state:'sent',sent_at:new Date().toISOString(),telegram_message_id:msg.message_id,claim_owner:null,claim_until:0,last_error:null};}\n  else{\n   const detail=scrub(typeof response.error==='string'?response.error:response.error?.message??response.description??'Telegram did not confirm message_id',500);\n   i.notification={...n,state:n.attempts>=MAX_ATTEMPTS?'attention':'pending',next_attempt_at:Date.now()+delays[Math.min(n.attempts-1,delays.length-1)],claim_owner:null,claim_until:0,last_error:detail};\n  }\n  S.write(file(i.incident_id),i);return {acknowledged:success,incident_id:i.incident_id,notification_state:i.notification.state};\n });}\n return {capture,apply,reconcile,claim,acknowledge,render,scrub,escape:esc,classify,valid,root};\n})();\n\nconst base=$('Claim Error Notice').first().json,response=$input.first().json;\nif(base.untracked){\n const msg=response.result??response;\n return [{json:{untracked:true,acknowledged:!response.error&&response.ok!==false&&Number.isSafeInteger(msg.message_id)&&msg.message_id>0}}];\n}\ntry{return [{json:E.acknowledge(base,response)}];}\ncatch(error){return [{json:{acknowledged:false,incident_id:base.incident_id,ack_storage_error:E.scrub(error.message,500)}}];}\n"
+      },
+      "id": "d119a691-eea8-5494-a40d-c27e7e6fd3bd",
+      "name": "Acknowledge Error Notice",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        6752,
+        2128
+      ]
+    }
+  ],
+  "connections": {
+    "Recovery Schedule": {
+      "main": [
+        [
+          {
+            "node": "Prepare Recovery Scan",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Recovery Scan": {
+      "main": [
+        [
+          {
+            "node": "Snapshot Required?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Snapshot Required?": {
+      "main": [
+        [
+          {
+            "node": "Get Recovery Snapshot",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Dispatch Oldest Recovery",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Recovery Snapshot": {
+      "main": [
+        [
+          {
+            "node": "Plan Recovery Stages",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Plan Recovery Stages": {
+      "main": [
+        [
+          {
+            "node": "Dispatch Oldest Recovery",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Dispatch Oldest Recovery": {
+      "main": [
+        [
+          {
+            "node": "Recovery Dispatch Required?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Recovery Dispatch Required?": {
+      "main": [
+        [
+          {
+            "node": "Resume Video Workflow",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Recovery Notice",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Resume Video Workflow": {
+      "main": [
+        [
+          {
+            "node": "Recovery Notice",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Recovery Notice": {
+      "main": [
+        [
+          {
+            "node": "Notify Recovery",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Receive Recovery Wake": {
+      "main": [
+        [
+          {
+            "node": "Authorize Recovery Wake",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Authorize Recovery Wake": {
+      "main": [
+        [
+          {
+            "node": "Acknowledge Recovery Wake",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Acknowledge Recovery Wake": {
+      "main": [
+        [
+          {
+            "node": "Prepare Recovery Scan",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Notify Recovery": {
+      "main": [
+        [
+          {
+            "node": "Acknowledge Recovery Notice",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Error Alert Schedule": {
+      "main": [
+        [
+          {
+            "node": "Reconcile Error Incidents",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Reconcile Error Incidents": {
+      "main": [
+        [
+          {
+            "node": "Claim Error Notice",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Claim Error Notice": {
+      "main": [
+        [
+          {
+            "node": "Error Notice Required?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Error Notice Required?": {
+      "main": [
+        [
+          {
+            "node": "Notify Error Retry",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Notify Error Retry": {
+      "main": [
+        [
+          {
+            "node": "Acknowledge Error Notice",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "timeSavedMode": "fixed",
+    "callerPolicy": "workflowsFromSameOwner",
+    "availableInMCP": false
+  },
+  "active": false,
+  "pinData": {}
+}

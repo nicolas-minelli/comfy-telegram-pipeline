@@ -1,0 +1,32 @@
+# Runtime secrets / local configuration
+.env
+.env.*
+!.env.example
+*.key
+*.pem
+*.pfx
+*.p12
+*.local.json
+
+# Private runtime data and exports
+production/
+exports-private/
+backups/
+logs/
+media/
+.telegram-ui/
+n8n_data/
+current-handler.json
+current-supervisor.json
+eh-v2-ready/
+*.log
+*.sqlite*
+*.db
+*.db-*
+*.zip
+
+# Generated files
+__pycache__/
+*.py[cod]
+.venv/
+node_modules/
