@@ -86,7 +86,7 @@ Os pesos não são distribuídos no repositório. Os nomes abaixo foram extraíd
 | film_net_fp16.safetensors | frame_interpolation |
 | RealESRGAN_x2plus.pth | upscale_models |
 
-Fontes de download, licenças e checksums de todos os pesos ainda precisam ser confirmados para a instalação pública. Este inventário não presume que os pesos possam ser redistribuídos sob a licença do projeto.
+Fontes de download e declarações de licença estão em [MODELS.md](MODELS.md). Os checksums completos e as revisões exatas dos pesos ainda não estão todos fixados. Este inventário não presume que os pesos possam ser redistribuídos sob a licença do projeto.
 
 ## Ambiente reportado
 
@@ -107,7 +107,7 @@ O primeiro comando gera os grafos com inputs fictícios usando os builders atuai
 
 ## Antes de apresentar como instalação reproduzível
 
-- Confirmar as fontes/licenças dos seis pesos.
+- Completar checksums e revisões exatas dos pesos; fontes e declarações observadas estão em MODELS.md.
 - Documentar a configuração consistente de usuário, caminhos, credenciais, Docker, webhooks e Error Workflow.
 - Inventariar Node.js e os encoders efetivos.
 - Testar os templates após configuração em ambiente separado.
