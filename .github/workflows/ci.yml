@@ -1,0 +1,93 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.event_name }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  offline-tests:
+    name: Offline tests (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04, windows-2022]
+    steps:
+      - name: Check out source
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+        with:
+          persist-credentials: false
+      - name: Set up Python 3.13
+        uses: actions/setup-python@e797f83bcb11b83ae66e0230d6156d7c80228e7c
+        with:
+          python-version: '3.13'
+      - name: Set up Node.js 22
+        uses: actions/setup-node@6044e13b5dc448c55e2357c09f80417699197238
+        with:
+          node-version: '22'
+          package-manager-cache: false
+      - name: Run Windows PowerShell 5.1 checks and offline tests
+        if: runner.os == 'Windows'
+        shell: powershell
+        run: |
+          $pythonPath = (Get-Command python -ErrorAction Stop).Source
+          & .\tools\Test-Repository.ps1 -PythonPath $pythonPath
+      - name: Run Linux offline tests
+        if: runner.os == 'Linux'
+        shell: bash
+        run: |
+          set -euo pipefail
+          node tools/export-runtime-graphs.cjs
+          python -B tests/test_custom_node_contracts.py
+          python -B tests/test_local_configuration.py
+          python -B tests/test_ingress_configuration.py
+      - name: Verify committed API graphs match the builders
+        shell: bash
+        run: git diff --exit-code -- comfy/api
+      - name: Check JSON files and Python syntax without importing services
+        shell: python
+        run: |
+          import ast
+          import json
+          import subprocess
+          from pathlib import Path
+          files = subprocess.check_output(['git', 'ls-files', '-z']).decode('utf-8').split('\0')
+          for name in filter(None, files):
+              path = Path(name)
+              if path.suffix == '.json':
+                  json.loads(path.read_text(encoding='utf-8'))
+              elif path.suffix == '.py':
+                  ast.parse(path.read_text(encoding='utf-8'), filename=name)
+          print('Tracked JSON files and Python syntax passed.')
+
+  secret-scan:
+    name: Secret scan
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Check out full history for scanning
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Scan working tree and reachable Git history
+        shell: bash
+        run: |
+          set -euo pipefail
+          scanner='ghcr.io/gitleaks/gitleaks@sha256:c00b6bd0aeb3071cbcb79009cb16a60dd9e0a7c60e2be9ab65d25e6bc8abbb7f'
+          docker pull "$scanner"
+          docker run --rm --network none \
+            --mount "type=bind,source=$GITHUB_WORKSPACE,target=/repo,readonly" \
+            "$scanner" dir /repo --redact=100 --no-banner
+          docker run --rm --network none \
+            --mount "type=bind,source=$GITHUB_WORKSPACE,target=/repo,readonly" \
+            "$scanner" git /repo --log-opts='--all' --redact=100 --no-banner
