@@ -1,3 +1,6 @@
+<img width="1280" height="640" alt="social-preview" src="https://github.com/user-attachments/assets/bf7ac47a-b332-4ade-8272-07959b318ed3" />
+
+
 # Comfy Telegram Pipeline
 
 **Project status: open-source portfolio project · `v1.0.0-preview.2`.**
