@@ -102,6 +102,7 @@ Tailscale provides remote access in the reference deployment. Telegram requires 
 node tools/export-runtime-graphs.cjs
 python -B tests/test_custom_node_contracts.py
 python -B tests/test_local_configuration.py
+python -B tests/test_ingress_configuration.py
 ```
 
 The exporter uses synthetic inputs and current n8n builders. Tests verify public ID scope, finalizer contracts, and local configuration using temporary files. They neither submit GPU tasks nor send messages, and do not replace end-to-end installation testing.
@@ -126,3 +127,13 @@ The exporter uses synthetic inputs and current n8n builders. Tests verify public
 | Six model weights | Exact filenames and sources | Local checksums, trusted-reference comparison, and exact source revisions |
 
 These gaps are disclosed in v1.0.0-preview.1. They do not become verified merely because a release tag exists. Keep any private runtime inventory outside the repository until reviewed and sanitized.
+
+
+## Remote-access reference
+
+The operator later confirmed Tailscale 1.104.2 on Windows, private Serve 443 to host 5678, public Funnel 8443 to a gateway on host 5680, and nginx:stable-alpine mapped to gateway container port 8080. The exact Nginx version/image digest remains unknown; the tag is mutable. Neither version is a universal minimum requirement.
+
+See [REMOTE-ACCESS.md](REMOTE-ACCESS.md) and examples/telegram-ingress for the sanitized configuration. Tailscale is the reference deployment's access solution; the application needs a correctly filtered public Telegram webhook and deliberate private operator access, not necessarily that vendor. Telegram delivery depends on Internet/external services even though model processing and storage are local.
+
+
+The assisted ingress preparer requires only Python standard-library code for generation. Validation/startup additionally require Docker Desktop/Compose; explicit route configuration requires the Tailscale CLI and an authorized device. No bot token is an input. Generated runbook actions are Windows-oriented and are not a claim that existing tailnet policy or webhook authentication has been verified.

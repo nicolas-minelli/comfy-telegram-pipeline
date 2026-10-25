@@ -1,0 +1,90 @@
+#requires -Version 5.1
+[CmdletBinding()]
+param(
+    [ValidateSet('Validate', 'StartGateway', 'ConfigureTailscale', 'Status')]
+    [string]$Action = 'Validate'
+)
+$ErrorActionPreference = 'Stop'
+$PSNativeCommandUseErrorActionPreference = $false
+$config = Get-Content -Raw -Encoding UTF8 -LiteralPath (Join-Path $PSScriptRoot 'ingress.local.json') | ConvertFrom-Json
+$composeFile = Join-Path $PSScriptRoot 'compose.local.yaml'
+function Invoke-IngressCommand {
+    param([string]$Executable, [string[]]$Arguments)
+    $program = Get-Command $Executable -CommandType Application -ErrorAction Stop
+    & $program.Source @Arguments
+    $code = $LASTEXITCODE
+    if ($code -ne 0) { throw ($Executable + ' failed. Exit code: ' + $code + '. No automatic reset or retry was performed.') }
+}
+function Invoke-GatewayCompose {
+    param([string[]]$Arguments)
+    Invoke-IngressCommand 'docker' (@('compose', '-p', [string]$config.project_name, '-f', $composeFile) + $Arguments)
+}
+function Test-LocalTcp {
+    param([int]$Port)
+    $client = New-Object Net.Sockets.TcpClient
+    try {
+        $operation = $client.BeginConnect('127.0.0.1', $Port, $null, $null)
+        if (-not $operation.AsyncWaitHandle.WaitOne(1500)) { return $false }
+        $client.EndConnect($operation)
+        return $client.Connected
+    } catch { return $false }
+    finally { $client.Dispose() }
+}
+function Assert-Settings {
+    if ($config.schema_version -ne 1) { throw 'Unsupported ingress settings.' }
+    if ($config.project_name -notmatch '^[a-z0-9][a-z0-9_-]{0,50}$') { throw 'Invalid Compose project name.' }
+    if ($config.hostname -notmatch '^[a-z0-9](?:[a-z0-9.-]*[a-z0-9])?\.ts\.net$') { throw 'Invalid Tailscale hostname.' }
+    if ($config.public_https_port -notin @(443, 8443)) { throw 'Funnel/Telegram public port must be 443 or 8443.' }
+    foreach ($port in @($config.n8n_host_port, $config.gateway_host_port)) {
+        if ([string]$port -notmatch '^\d{1,5}$' -or [int]$port -lt 1024 -or [int]$port -gt 65535) { throw 'Invalid host port.' }
+    }
+    if ($config.private_https_port -lt 1 -or $config.private_https_port -gt 65535) { throw 'Invalid private HTTPS port.' }
+    if ($config.n8n_host_port -eq $config.gateway_host_port -or $config.private_https_port -eq $config.public_https_port) {
+        throw 'Private/public listeners and local gateway/n8n ports must differ.'
+    }
+}
+Assert-Settings
+switch ($Action) {
+    'Validate' {
+        Invoke-GatewayCompose @('config', '--quiet')
+        Invoke-GatewayCompose @('run', '--rm', '--no-deps', 'telegram-gateway', '-t')
+        Write-Output 'Compose and Nginx syntax checks passed. No listener or Funnel route was started.'
+    }
+    'StartGateway' {
+        # Refuse adopting an existing project or host listener, including an earlier run of this helper.
+        $existing = @(Invoke-GatewayCompose @('ps', '--all', '--quiet'))
+        if ($existing.Count -gt 0) { throw 'This Compose project already has containers. Inspect it; use its reviewed Compose lifecycle explicitly.' }
+        if (Test-LocalTcp ([int]$config.gateway_host_port)) { throw 'Gateway host port is already accepting connections. Existing service was preserved.' }
+        Invoke-GatewayCompose @('config', '--quiet')
+        Invoke-GatewayCompose @('run', '--rm', '--no-deps', 'telegram-gateway', '-t')
+        Invoke-GatewayCompose @('up', '-d')
+        Write-Output 'Gateway started. No Tailscale route was changed. Inspect status before enabling public access.'
+    }
+    'ConfigureTailscale' {
+        # Intentional route changes are allowed only on an unconfigured Serve/Funnel host.
+        $status = (Invoke-IngressCommand 'tailscale' @('status', '--json') | Out-String) | ConvertFrom-Json
+        if ($status.BackendState -ne 'Running' -or -not $status.Self.DNSName) { throw 'Tailscale is not running with an identifiable DNS name.' }
+        $dns = ([string]$status.Self.DNSName).TrimEnd('.').ToLowerInvariant()
+        if ($dns -ne [string]$config.hostname) { throw 'Configured hostname does not match this Tailscale device. No route changed.' }
+        $routes = (Invoke-IngressCommand 'tailscale' @('serve', 'status', '--json') | Out-String) | ConvertFrom-Json
+        if ($null -eq $routes) { throw 'Empty or unexpected Serve status; no route changed.' }
+        if (@($routes.PSObject.Properties).Count -gt 0) {
+            throw 'Existing Serve/Funnel state found. Refusing to replace any route. Follow REMOTE-ACCESS.md and review the existing services manually.'
+        }
+        if (-not (Test-LocalTcp ([int]$config.n8n_host_port))) { throw 'n8n host port is not reachable on loopback.' }
+        if (-not (Test-LocalTcp ([int]$config.gateway_host_port))) { throw 'Gateway host port is not reachable on loopback.' }
+        # Recheck the configured gateway before creating an Internet-facing route.
+        Invoke-GatewayCompose @('config', '--quiet')
+        Invoke-GatewayCompose @('exec', '-T', 'telegram-gateway', 'nginx', '-t')
+        Invoke-IngressCommand 'tailscale' @('serve', '--bg', ('--https=' + $config.private_https_port), ('http://127.0.0.1:' + $config.n8n_host_port))
+        Invoke-IngressCommand 'tailscale' @('funnel', '--bg', ('--https=' + $config.public_https_port), ('http://127.0.0.1:' + $config.gateway_host_port))
+        Write-Output 'Requested private Serve and public Funnel routes. Verify status, application authentication, and actual reachability.'
+    }
+    'Status' {
+        Invoke-GatewayCompose @('ps', '--all')
+        Invoke-IngressCommand 'tailscale' @('serve', 'status')
+        Invoke-IngressCommand 'tailscale' @('funnel', 'status')
+    }
+}
+# External calls are sequential. If a later call fails, earlier successful changes remain.
+# There is deliberately no automatic rollback, reset, volume deletion, or production update.

@@ -1,0 +1,15 @@
+# Windows + Docker Desktop reference. Prepare nginx.conf beside this file first.
+# This does not create n8n, Tailscale, certificates, DNS, or firewall rules.
+# Do not start alongside another gateway already bound to host port 5680.
+services:
+  telegram-gateway:
+    image: nginx:stable-alpine
+    restart: unless-stopped
+    entrypoint: ["nginx", "-g", "daemon off;"]
+    ports:
+      - "127.0.0.1:5680:8080"
+    volumes:
+      - type: bind
+        source: ./nginx.conf
+        target: /etc/nginx/nginx.conf
+        read_only: true

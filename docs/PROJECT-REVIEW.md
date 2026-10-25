@@ -91,3 +91,19 @@ The public distribution now uses English documentation, tutorial/FAQ, infographi
 ## Portfolio/community publication
 
 The current README describes the project as an open-source portfolio preview. CONTRIBUTING.md, SECURITY.md, structured bug/feature forms, and a PR template explain contribution scope and sanitized reporting. No support SLA or clean-install validation is promised. These files do not enable GitHub Issues, private vulnerability reporting, rulesets, or public visibility automatically; see MAINTAINER.md for repository settings. No runtime protocol, workflow, model, or production setting changed in this documentation update.
+
+
+## Remote-access documentation review
+
+The operator supplied current Serve/Funnel status, selected URL environment variables, Docker port mappings, and a complete Nginx configuration with successful nginx -T output. The public example removes the actual webhook UUID and uses explicit path/upstream placeholders. Documentation explains the default-deny POST allowlist, forwarded-header replacement, body/rate limits, acknowledgment timeouts, and separation of public bot ingress from private forms.
+
+The gateway Compose example was reconstructed from the observed topology; the complete original Compose file was not supplied. No new gateway container, Tailscale route, live webhook-origin probe, or clean installation was executed here. The upstream template was compared to the supplied directives after placeholder substitution, and YAML/links/placeholder handling were checked locally. Existing production routing was not changed.
+
+
+## Assisted ingress preparation and security links
+
+The tutorial's section 6 now links directly to remote-access setup, explicit automation actions, and security recommendations. SECURITY.md links to the same deployment checklist while retaining its private-reporting policy.
+
+Added configure_ingress.py and Initialize-TelegramIngress.ps1, which prepare a new external directory without starting services. The generated runbook separates Validate, StartGateway, ConfigureTailscale, and Status. It refuses existing Serve/Funnel state and existing gateway projects during automatic startup rather than resetting/adopting production services. The Tailscale action checks the actual device DNS name and local endpoints, but those checks are not an authentication/security audit. Successful earlier changes are not automatically rolled back if a later external command fails.
+
+Five new offline tests verify generated routing/loopback mounts, source preservation, supported port separation, unsafe URLs/routes, and refusal of existing/repository destinations. All original six plus five new tests passed locally. The PowerShell wrapper now also parses the runbook template and runs the new tests; that updated wrapper and live Docker/Tailscale actions were not executed on Windows here. The operator's earlier Windows confirmation still applies to the previous six tests, not to these new actions.

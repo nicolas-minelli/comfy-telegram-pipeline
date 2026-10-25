@@ -141,6 +141,10 @@ Keep Manual Recovery outside automatic publication. Do not prefill its confirmat
 
 ## 8. HTTPS, Telegram, and private approval
 
+Use [assisted ingress preparation](REMOTE-ACCESS.md#11-assisted-configuration-and-explicit-actions) to generate private gateway files without starting services. Review [remote-access security](REMOTE-ACCESS.md#10-security-recommendations) before the separate startup/routing actions. Existing routes are not automatically replaced.
+
+For the observed Windows routing, exact-path Nginx template, forwarded-header explanation, and new-installation commands, see [REMOTE-ACCESS.md](REMOTE-ACCESS.md). The reference uses private Serve 443 and public Funnel 8443, with a restrictive gateway between Funnel and n8n.
+
 The reference deployment has two surfaces:
 
 - Public HTTPS accepts only the actual Telegram Trigger's POST route through an explicit path/method proxy rule.

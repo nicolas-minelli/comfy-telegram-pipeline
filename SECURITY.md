@@ -24,6 +24,8 @@ Examples of sensitive material include Telegram bot tokens, the Comfy integratio
 
 ## Deployment boundaries
 
+See the [Tailscale, Nginx, and alternative-proxy security recommendations](docs/REMOTE-ACCESS.md#10-security-recommendations) for account/device protection, least-privilege access, exact-route filtering, headers, limits, and safe diagnostics. The [assisted ingress setup](docs/REMOTE-ACCESS.md#11-assisted-configuration-and-explicit-actions) generates private configuration; it does not audit or choose your access policy.
+
 - Keep Comfy APIs, internal submission/recovery endpoints, editor, and approval forms off the public bot surface.
 - Restrict the public proxy to the actual Telegram Trigger route/method and validate its origin protection.
 - Treat Telegram ID allowlists as authorization, not proof that an Internet request came from Telegram.

@@ -94,7 +94,7 @@ $ComfyPython = Join-Path $ComfyRoot '.venv\Scripts\python.exe'
 
 Adapt this to your distribution. In Desktop installations, main.py and .venv are in the instance's ComfyUI directory, not necessarily beside the Desktop executable.
 
-If downloaded scripts are blocked, review them and unblock only these five project scripts:
+If downloaded scripts are blocked, review them and unblock only the project scripts you will use:
 
 ```powershell
 Unblock-File .\tools\Initialize-Pipeline.ps1
@@ -102,6 +102,7 @@ Unblock-File .\tools\Install-PipelineCustomNodes.ps1
 Unblock-File .\tools\Test-Pipeline.ps1
 Unblock-File .\tools\Test-Repository.ps1
 Unblock-File .\tools\Get-TelegramIdentity.ps1
+Unblock-File .\tools\Initialize-TelegramIngress.ps1
 Get-ExecutionPolicy -List
 ```
 
@@ -275,6 +276,8 @@ The reference uses internal runners, not a universal isolation recommendation. O
 
 ### 6.2 HTTPS and public/private paths
 
+Follow the [Tailscale and Nginx tutorial](REMOTE-ACCESS.md) for the complete routing setup, and its [assisted configuration steps](REMOTE-ACCESS.md#11-assisted-configuration-and-explicit-actions) for ready-to-run PowerShell commands. Review the [remote-access security recommendations](REMOTE-ACCESS.md#10-security-recommendations) before starting a gateway or enabling Funnel. These examples document the reference deployment; they are not a required production migration or a clean-install certification.
+
 Configure two proxy surfaces:
 
 - Private HTTPS: UI and forms reachable by phone through Tailscale.
@@ -289,6 +292,27 @@ After import, copy Telegram Trigger's **Production URL** and allow only that exa
 Native upstream Trigger code registers/verifies secret_token for node versions above 1; templates use 1.2. Confirm installed behavior and preserve X-Telegram-Bot-Api-Secret-Token through the proxy. Do not manually replace setWebhook and lose the secret. Body IDs are additional authorization, not a substitute for origin verification.
 
 Do not expose /webhook/start, /webhook/video-queue-reconcile, /form-waiting, the UI, or /n8n/jobs/* through the bot's public surface. Approval uses the private surface. A matching user ID in JSON does not prove a public POST came from Telegram.
+
+### 6.2.1 Generate the private gateway configuration
+
+The helper generates files only; no service or public route starts automatically. Use a new directory outside Git and the exact native Telegram Trigger Production URL. To obtain its path, complete the inactive workflow import in section 7 and return here before publishing it. The URL base must already reflect your intended public n8n webhook base; do not substitute /webhook/start or an editor test URL.
+
+```powershell
+$IngressRoot = 'E:\AI\services\telegram-ingress-new'
+$TelegramProductionUrl = Read-Host 'Exact Telegram Trigger Production HTTPS URL'
+
+.\tools\Initialize-TelegramIngress.ps1 `
+    -OutputRoot $IngressRoot `
+    -TelegramWebhookUrl $TelegramProductionUrl `
+    -N8nHostPort 5681 `
+    -GatewayHostPort 5682 `
+    -PrivateHttpsPort 443 `
+    -ProjectName 'telegram-ingress-new'
+```
+
+These are lab host ports. The working production reference uses 5678/5680 instead. For private HTTPS 443, use public Funnel 8443 in the Trigger URL. Review generated n8n-url-settings.env; it is a reference, not an automatic edit of your n8n container.
+
+Then follow the separate actions for [validation, gateway startup, and Tailscale routing](REMOTE-ACCESS.md#11-assisted-configuration-and-explicit-actions). The routing action refuses existing Serve/Funnel state, so it will not overwrite the reference operator's working configuration. For existing services, inspect and follow the manual path rather than resetting them. A phone, host, and account still need appropriate Tailscale permissions and security configuration.
 
 ### 6.3 n8n credentials
 
@@ -322,6 +346,19 @@ Set-Clipboard -Value ''
 ```
 
 Do not share full docker inspect output, .env, databases, or credential exports for support; they may expose secrets.
+
+### 6.4 Security before remote exposure
+
+Read the [full Tailscale/proxy security checklist](REMOTE-ACCESS.md#10-security-recommendations). For reporting a vulnerability privately, use [SECURITY.md](../SECURITY.md).
+
+- Protect the Tailscale identity-provider account with MFA; review approved users/devices and revoke lost devices. Restrict private access with least-privilege grants/ACLs rather than assuming every tailnet member should reach the editor.
+- Keep private Serve and public Funnel separate. Funnel's public endpoint is not protected by requiring a visitor to join the tailnet. Do not expose the editor, forms, Comfy, or internal /start/recovery endpoints through it.
+- With Nginx or another proxy, allow only the exact production Trigger POST path, preserve native Telegram origin-authentication headers, default-deny everything else, and retain appropriate body/rate/time limits.
+- Review actual forwarded headers before setting proxy hops; never trust client-supplied identity headers as proof of origin. Use HTTPS entry points and do not bypass certificate warnings.
+- Keep host, client, proxy, and n8n updated. Limit access to the editor/Code nodes and keep gateway mounts minimal. Do not mount the Docker socket or private media into a gateway that only needs its config.
+- Do not publish tokens, keys, signed form links, full logs, runtime state, or local proxy configuration. Review metadata and backups, and rotate exposed credentials instead of merely deleting the visible copy.
+
+A hostile Wi-Fi network does not automatically enter your tailnet, but a compromised authorized device/account remains a risk. None of these recommendations replaces application authorization, approval, or uncertain-submission protection.
 
 ## 7. Import and review workflows
 
@@ -518,6 +555,7 @@ Or run tests separately:
 node .\tools\export-runtime-graphs.cjs
 & $ComfyPython -B .\tests\test_custom_node_contracts.py
 & $ComfyPython -B .\tests\test_local_configuration.py
+& $ComfyPython -B .\tests\test_ingress_configuration.py
 ```
 
 The exporter deterministically rewrites public examples. Configuration tests use temporary directories, verify unchanged sources/correlated substitutions, and compile generated Code blocks when Node is available. Finalizer tests use dummy bytes; they do not validate model-produced MP4 quality.

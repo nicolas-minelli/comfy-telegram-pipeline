@@ -3,7 +3,10 @@
 param([string]$PythonPath)
 $ErrorActionPreference = 'Stop'
 $repoRoot = Split-Path $PSScriptRoot -Parent
-foreach ($scriptFile in (Get-ChildItem -LiteralPath $PSScriptRoot -Filter '*.ps1')) {
+# Generated runbook source is parsed too; no service commands are executed.
+$scriptFiles = @(Get-ChildItem -LiteralPath $PSScriptRoot -Filter '*.ps1') +
+    @(Get-ChildItem -LiteralPath (Join-Path $repoRoot 'examples\telegram-ingress') -Filter '*.ps1.template')
+foreach ($scriptFile in $scriptFiles) {
     $parseTokens = $null
     $parseErrors = $null
     [System.Management.Automation.Language.Parser]::ParseFile(
@@ -28,6 +31,8 @@ try {
     if ($LASTEXITCODE -ne 0) { throw 'Custom node contract test failed.' }
     & $PythonPath -B '.\tests\test_local_configuration.py'
     if ($LASTEXITCODE -ne 0) { throw 'Local configuration test failed.' }
+    & $PythonPath -B '.\tests\test_ingress_configuration.py'
+    if ($LASTEXITCODE -ne 0) { throw 'Ingress configuration test failed.' }
 } finally {
     Pop-Location
 }
