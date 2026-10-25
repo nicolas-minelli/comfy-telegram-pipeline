@@ -1,5 +1,7 @@
 # Comfy Telegram Pipeline
 
+**Release status: `v1.0.0-preview.1` — preview, not a clean-install-validated stable release.**
+
 Local video production with **Telegram + n8n + Comfy**: send an image, choose an aspect ratio and duration, track the queue, approve the preview, and receive confirmation when your final clip is ready.
 
 **Flow:** first frame → LTX at 30 FPS → preview → approval → FILM 2x → batch upscale → MP4 at 60 FPS → notification.
@@ -70,8 +72,10 @@ Requires Node.js and Python 3.10+; use `-PythonPath` to select your Comfy Python
 
 Derived from a working private installation, with personal data and credential bindings removed. Private runtime data, keys, databases, media, and tokens stay outside this repository.
 
-Offline tests have run. Updated PowerShell wrappers and the lab Compose deployment still need Windows and clean-install validation. Telegram delivery is not guaranteed exactly once. Sufficient model resources remain necessary. `/stop` affects the entire Comfy queue; a dedicated instance is recommended.
+The operator confirmed PowerShell parse checks, five API graph checks, and all six offline tests passing on Windows. Live setup helpers and a clean lab deployment still need end-to-end validation. Telegram delivery is not guaranteed exactly once. Sufficient model resources remain necessary. `/stop` affects the entire Comfy queue; a dedicated instance is recommended.
 
 Bot ID checks do not replace public webhook origin verification. Read the tutorial before exposing endpoints. VHS videos may embed workflow metadata; review it before sharing examples.
 
-No model weights are redistributed. Dependencies retain their own licenses. A license for this project's code has not yet been selected. CI/CD is not implemented in this delivery.
+Original project code and documentation are available under the [MIT License](LICENSE), copyright (c) 2026 Nicolas Minelli. Third-party materials retain their own licenses; this license does not relicense n8n, Comfy, plugins, or model weights. No weights are redistributed. CI/CD is not implemented in this delivery.
+
+See [preview release notes](docs/releases/v1.0.0-preview.1.md) and the [release procedure](docs/RELEASING.md).

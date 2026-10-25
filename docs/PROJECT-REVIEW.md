@@ -58,7 +58,7 @@ Credential selection, Error Workflow binding, and HTTPS proxy setup remain manua
 - Five API graph exports passed; connections, loader, audio, batch size, and finalizer checked.
 - Public Python/jsCode syntax checked without importing plugins into real Comfy.
 - SVG/PNG infographic rendered and visually inspected, with editable flow/text.
-- No pwsh/powershell exists in this Linux environment. Updated wrappers still require Windows parser and runtime checks. Test-Repository automates the parser check on the user's machine.
+- No pwsh/powershell exists in this Linux environment. The operator subsequently confirmed Windows PowerShell parser checks and all six offline tests passing. Setup helpers still require live Windows/runtime validation.
 - New Docker/HTTPS/n8n/GPU/Telegram services were not started. Earlier private-runtime tests are not a new test of the lab Compose deployment.
 
 ## Next operator tests
@@ -69,7 +69,7 @@ Credential selection, Error Workflow binding, and HTTPS proxy setup remain manua
 4. Run diagnostics in isolation before publishing schedules.
 5. Run documented T0–T6 tests according to deployment scope and risk.
 
-Still needed for stronger reproducibility: project-code license, exact weight revisions/checksums, clean-install testing, an appropriate authenticated proxy profile, CI/CD, and further concurrency tests. No production runtime changes were made to write this tutorial.
+Original project material is now MIT-licensed. Still needed for stronger reproducibility: exact weight revisions/checksums, clean-install testing, an appropriate authenticated proxy profile, CI/CD, and further concurrency tests. No production runtime changes were made to write this tutorial.
 
 Current upstream Telegram Trigger code registers/verifies secret_token for node versions above 1. Templates use 1.2. The tutorial requires preserving the header and confirming installed behavior; it does not claim an origin-forgery test was run against the operator's endpoint.
 
@@ -79,7 +79,7 @@ The operator ran Test-Repository on Windows: PowerShell parsing and two contract
 
 Tests now specify encoding=utf-8 for text reads and Node subprocess transport. PowerShell diagnostic Get-Content also specifies UTF8. A regression check rejects future read_text/write_text or text=True subprocess calls without explicit encoding in Python tools/tests.
 
-All six tests passed after the fix, including a run with implicit Path/subprocess defaults forced to CP1252. This simulation covers the reported defect; rerun the updated wrapper on Windows. No production workflows, models, credentials, or files were changed.
+All six tests passed after the fix, including a run with implicit Path/subprocess defaults forced to CP1252. The operator subsequently reran the updated wrapper on Windows successfully, including all six tests. This confirms the encoding fix in that environment. No production workflows, models, credentials, or files were changed.
 
 ## English localization review
 

@@ -86,7 +86,7 @@ Weights are not distributed. These exact names come from the supplied exports an
 | film_net_fp16.safetensors | frame_interpolation |
 | RealESRGAN_x2plus.pth | upscale_models |
 
-Download sources and license declarations are in [MODELS.md](MODELS.md). Not all checksums or exact weight revisions are pinned. This inventory does not imply permission to redistribute weights under this project's eventual license.
+Download sources and license declarations are in [MODELS.md](MODELS.md). Not all checksums or exact weight revisions are pinned. This inventory does not imply permission to redistribute weights under this project's MIT license.
 
 ## Reported environment
 
@@ -112,4 +112,17 @@ The exporter uses synthetic inputs and current n8n builders. Tests verify public
 - Validate assisted setup in TUTORIAL.md and SETUP.md on a clean installation.
 - Inventory Node.js and effective encoders.
 - Test configured templates in an isolated environment.
-- Choose a license for project code while preserving separate dependency licenses.
+- Preserve the MIT notice for original project material and separate notices/terms for dependencies.
+
+## Preview pinning status
+
+| Component | What is recorded | Still required |
+|---|---|---|
+| n8n | Image tag 2.43.7 | Record the actual deployed image digest for a reproducible deployment |
+| Comfy | Operator-reported 0.42.3 | Exact source commit/distribution build |
+| VideoHelperSuite | Operator-reported 1.7.9 | Exact upstream commit, if recoverable; do not use a parent repository hash |
+| Project custom nodes | Source included in the release | Git tag/commit identifies the distributed source |
+| Python / PyTorch | Reported 3.13.12 / 2.12.0+rocm7.14.0 | Complete environment/encoder inventory |
+| Six model weights | Exact filenames and sources | Local checksums, trusted-reference comparison, and exact source revisions |
+
+These gaps are disclosed in v1.0.0-preview.1. They do not become verified merely because a release tag exists. Keep any private runtime inventory outside the repository until reviewed and sanitized.

@@ -4,7 +4,7 @@ From folder preparation to the final video: assisted installation, verification,
 
 **Audience:** Windows users with Docker Desktop and a working Comfy installation. **Reference:** n8n 2.43.7, Comfy 0.42.3, VideoHelperSuite 1.7.9, and the models in [MODELS.md](MODELS.md). Reference versions are not a promise of future compatibility.
 
-**Validation status:** the author tested the private pipeline. Public templates have undergone review and offline tests. Updated PowerShell scripts still need Windows execution; they were not run in this Linux environment. This guide is not clean-install certification and does not replace a production backup.
+**Validation status:** the author tested the private pipeline. Public templates have undergone review and offline tests. The operator confirmed Windows PowerShell parsing and all six offline tests passing. Setup helpers and a clean deployment still need live validation; they were not executed against services in this Linux environment. This guide is not clean-install certification and does not replace a production backup.
 
 ![Pipeline infographic](assets/pipeline-flow.png)
 
@@ -835,4 +835,4 @@ First use the configured private HTTPS base and check proxy forwarding. Disablin
 - [Upstream Telegram Trigger](https://github.com/n8n-io/n8n/blob/master/packages/nodes-base/nodes/Telegram/TelegramTrigger.node.ts)
 - [VideoHelperSuite](https://github.com/Kosinkadink/ComfyUI-VideoHelperSuite)
 
-Selecting a code license and implementing CI/CD remain separate tasks. This tutorial chooses no license automatically and enables no deployment pipeline.
+Original project code and documentation use the [MIT License](../LICENSE). External software and weights retain their own terms. CI/CD remains a separate task; this tutorial enables no deployment pipeline. Follow [RELEASING.md](RELEASING.md) to publish the preview from an exact Git commit.

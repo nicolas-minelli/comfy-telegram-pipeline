@@ -33,7 +33,7 @@ Six exports: main LTX, Telegram Bot, Automatic Recovery v2 supervisor, Error Han
 
 This review cannot detect every possible secret format. Never include raw exports, Docker volumes, `.env`, keys, or logs in the same commit. Before pushing, review the exact staged files and scan both repository contents and the history being published.
 
-The package includes local configuration preparation, diagnostics, and a tutorial. It does not include a selected project license or a complete production service/update system. See `docs/PROJECT-REVIEW.md` for additional review and tests. Validate a clean installation and the Windows wrappers before advertising an installable release.
+The package includes local configuration preparation, diagnostics, and a tutorial. Original project material is licensed under MIT; dependency licenses remain separate. A complete production service/update system is not included. See `docs/PROJECT-REVIEW.md` for additional review and tests. Windows parser/offline checks have since passed. Validate setup-helper execution and a clean installation before advertising a stable installable release.
 
 Keep private installation files in your Windows `production` folder. That name only organizes exported files; it does not change n8n's internal storage.
 

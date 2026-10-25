@@ -63,3 +63,47 @@ Compare only against a trusted reference for the same file. A local hash without
 ## Repository security
 
 Keep Hugging Face tokens, Telegram tokens, the Job Control Bearer key, n8n credentials, and weights outside Git. Authenticate to Hugging Face locally; do not put tokens in URLs, commands, screenshots, or issues. Links here contain no credentials.
+
+## Preview checksum checklist
+
+| Weight | Trusted reference recorded here | Local production comparison |
+|---|---|---|
+| LTX distilled INT8 ConvRot | Pending | Not performed in this review |
+| Gemma INT8 ConvRot | Pending | Not performed in this review |
+| LTX video VAE conv-bf16 | Pending | Not performed in this review |
+| LTX audio VAE bf16 | Pending | Not performed in this review |
+| FILM fp16 | Public SHA256 above | Not performed in this review |
+| RealESRGAN x2plus | Pending | Not performed in this review |
+
+To calculate local hashes without loading models into RAM/GPU, run this on the machine that stores them. Change ModelsRoot to your actual categorized model root. It reads the six large files sequentially and can take time; avoid competing with active generation for disk access. It writes a private CSV outside Git and refuses to overwrite an existing inventory.
+
+```powershell
+$ModelsRoot = Read-Host 'Absolute path to your categorized model root'
+$inventoryPath = Join-Path $env:TEMP ('comfy-model-inventory-' + [Guid]::NewGuid().ToString('N') + '.csv')
+$modelFiles = @(
+    'diffusion_models\ltx-2.5-22b-distilled-transformer-comfy-int8-convrot.safetensors'
+    'text_encoders\gemma4-12b-with-proj-ltx-2.5-comfy-int8-convrot.safetensors'
+    'vae\ltx-2.5-video-vae-conv-bf16.safetensors'
+    'vae\ltx-2.5-audio-vae-bf16.safetensors'
+    'frame_interpolation\film_net_fp16.safetensors'
+    'upscale_models\RealESRGAN_x2plus.pth'
+)
+$inventory = foreach ($relativePath in $modelFiles) {
+    $modelPath = Join-Path $ModelsRoot $relativePath
+    if (-not (Test-Path -LiteralPath $modelPath -PathType Leaf)) {
+        throw ('Missing model: ' + $relativePath + '. Adapt paths for your extra-model-paths layout.')
+    }
+    $item = Get-Item -LiteralPath $modelPath -ErrorAction Stop
+    $hash = Get-FileHash -Algorithm SHA256 -LiteralPath $modelPath -ErrorAction Stop
+    [PSCustomObject]@{
+        RelativePath = $relativePath
+        Bytes = $item.Length
+        SHA256 = $hash.Hash.ToLowerInvariant()
+        UpstreamComparison = 'not_verified'
+    }
+}
+$inventory | Export-Csv -LiteralPath $inventoryPath -NoTypeInformation -Encoding UTF8 -NoClobber
+$inventoryPath
+```
+
+If extra-model-paths spans multiple roots/subfolders, adapt each path explicitly. No missing file is silently replaced. These hashes identify your local files; source identity remains unverified until compared with trusted references for the corresponding exact revisions. Do not copy Hugging Face tokens or authenticated download URLs into the CSV or public documentation.
