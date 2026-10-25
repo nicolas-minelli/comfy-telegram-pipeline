@@ -1,25 +1,27 @@
-# Publishing v1.0.0-preview.1
+# Publishing v1.0.0-preview.2
 
 Run this from your actual Windows Git clone, after reviewing the updated files. The distributed source snapshot does not contain your .git history or authenticated GitHub session. These commands do not modify the production n8n/Comfy runtime.
 
-## 1. Review and commit the release documents
+## 1. Validate, review, and commit the release candidate
 
-Confirm LICENSE exists. The preview is intentionally not a stable clean-install certification. The operator has already confirmed Windows parser checks and all six offline tests passing.
+Confirm LICENSE exists. Keep v1.0.0-preview.1 and its release assets unchanged. This procedure publishes a new prerelease. The preview is intentionally not a stable clean-install certification. The operator confirmed the previous Windows parser checks and original six tests. The updated wrapper now parses the ingress runbook and runs eleven tests; run it for the exact candidate source and report only checks actually completed.
 
 ```powershell
 Set-Location 'E:\AI\repos\comfy-telegram-pipeline'
 git status --short --untracked-files=all
 git diff --check
-git diff -- README.md EXPORT-REVIEW.md docs
+git diff -- README.md EXPORT-REVIEW.md docs tools tests examples .github
+.\tools\Test-Repository.ps1
+if (-not $?) { throw 'Offline checks failed; do not tag this candidate.' }
 ```
 
-After reviewing the expected changes only:
+Before committing, review all new files, including .github, tools, tests, and examples. The staging list below is scoped to public source folders; do not proceed if your local copy contains private runtime data in them. After reviewing the expected changes only:
 
 ```powershell
-git add -- LICENSE README.md EXPORT-REVIEW.md docs/DEPENDENCIES.md docs/MODELS.md docs/PROJECT-REVIEW.md docs/TUTORIAL.md docs/RELEASING.md docs/releases/v1.0.0-preview.1.md
+git add -- .gitattributes .gitignore LICENSE README.md EXPORT-REVIEW.md CONTRIBUTING.md SECURITY.md .github comfy docs tests tools examples
 git diff --cached --check
 git diff --cached --name-only
-git commit -m "Prepare MIT-licensed v1.0.0 preview release"
+git commit -m "Prepare v1.0.0-preview.2 community and ingress tooling"
 if ($LASTEXITCODE -ne 0) { throw 'Commit failed; resolve before continuing.' }
 ```
 
@@ -72,13 +74,13 @@ Continue only after both scans pass and the tree contains no uncommitted files. 
 
 ```powershell
 if (@(git status --porcelain).Count -ne 0) { throw 'Working tree must be clean.' }
-$releaseTag = 'v1.0.0-preview.1'
+$releaseTag = 'v1.0.0-preview.2'
 git show-ref --verify --quiet "refs/tags/$releaseTag"
 if ($LASTEXITCODE -eq 0) { throw 'Tag already exists. Inspect it; do not move or overwrite it.' }
 if ($LASTEXITCODE -ne 1) { throw 'Tag lookup failed.' }
 $releaseCommit = git rev-parse HEAD
 if ($LASTEXITCODE -ne 0) { throw 'Cannot resolve HEAD.' }
-git tag -a $releaseTag -m 'Comfy Telegram Pipeline v1.0.0 preview 1' $releaseCommit
+git tag -a $releaseTag -m 'Comfy Telegram Pipeline v1.0.0 preview 2' $releaseCommit
 if ($LASTEXITCODE -ne 0) { throw 'Tag creation failed.' }
 
 $assetDir = Join-Path $env:TEMP 'comfy-pipeline-release'
@@ -108,15 +110,22 @@ gh auth status
 
 If not authenticated, run `gh auth login` and follow the browser prompts. Do not print credentials or use `gh auth token` for support.
 
-Check the remote before publishing:
+If a release for this tag already exists, inspect it instead of blindly retrying creation. Check the remote before publishing:
 
 ```powershell
 git remote get-url origin
 ```
 
-It must be your intended repository. Then:
+It must be your intended repository. Then ensure HEAD still matches the tagged candidate and the tree remains clean:
 
 ```powershell
+$currentCommit = git rev-parse HEAD
+if ($LASTEXITCODE -ne 0) { throw 'Cannot resolve current HEAD.' }
+$tagCommit = git rev-parse "${releaseTag}^{commit}"
+if ($LASTEXITCODE -ne 0) { throw 'Cannot resolve the release tag.' }
+if ($currentCommit -ne $tagCommit -or @(git status --porcelain).Count -ne 0) {
+    throw 'Source changed after tagging. Inspect before publishing.'
+}
 git push origin HEAD
 if ($LASTEXITCODE -ne 0) { throw 'Branch push failed.' }
 git push origin $releaseTag
@@ -126,8 +135,8 @@ gh release create $releaseTag $asset $checksumFile `
     --repo nicolas-minelli/comfy-telegram-pipeline `
     --verify-tag `
     --prerelease `
-    --title 'Comfy Telegram Pipeline v1.0.0-preview.1' `
-    --notes-file '.\docs\releases\v1.0.0-preview.1.md'
+    --title 'Comfy Telegram Pipeline v1.0.0-preview.2' `
+    --notes-file '.\docs\releases\v1.0.0-preview.2.md'
 if ($LASTEXITCODE -ne 0) { throw 'Release creation failed. Inspect existing releases before retrying.' }
 
 gh release view $releaseTag --repo nicolas-minelli/comfy-telegram-pipeline

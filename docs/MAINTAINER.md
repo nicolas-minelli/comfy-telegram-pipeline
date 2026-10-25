@@ -6,7 +6,7 @@ The repository is an open-source portfolio/community preview under MIT, not a su
 
 Review and commit README.md, CONTRIBUTING.md, SECURITY.md, .github/ISSUE_TEMPLATE, .github/PULL_REQUEST_TEMPLATE.md, this guide, and the updated project review. Merge/push them to the actual default branch for issue templates to be available to contributors.
 
-Existing releases and source ZIPs remain snapshots of their original tags. Do not move v1.0.0-preview.1 to include these files. This change can live on the default branch without creating a new release immediately.
+Existing releases and source ZIPs remain snapshots of their original tags. Do not move v1.0.0-preview.1 to include these files. The community/remote-access changes are now documented for v1.0.0-preview.2; create a new tag rather than moving the original one.
 
 ## Repository settings to verify manually
 

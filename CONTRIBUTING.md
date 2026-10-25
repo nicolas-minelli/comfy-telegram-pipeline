@@ -51,6 +51,7 @@ Or run the underlying commands with your selected Python executable:
 node .\tools\export-runtime-graphs.cjs
 python -B .\tests\test_custom_node_contracts.py
 python -B .\tests\test_local_configuration.py
+python -B .\tests\test_ingress_configuration.py
 ```
 
 The exporter regenerates the five API examples from builders. Review any resulting graph changes. Offline checks do not establish GPU behavior, clean-install success, or concurrency correctness.
