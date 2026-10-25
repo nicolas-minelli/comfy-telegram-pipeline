@@ -7,6 +7,8 @@
 *.pfx
 *.p12
 *.local.json
+*.local.yaml
+*.local.yml
 
 # Private runtime data and exports
 production/

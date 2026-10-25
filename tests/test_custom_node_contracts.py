@@ -53,7 +53,7 @@ class CustomNodeContracts(unittest.TestCase):
                     self.assertEqual(destination.name, config['final_basename'] + '.mp4')
                     self.assertEqual(destination.read_bytes(), b'fixture-video-bytes')
                     self.assertFalse(source.exists())
-                    receipt = json.loads((destination.parent / ('.' + config['final_basename'] + '.done.json')).read_text())
+                    receipt = json.loads((destination.parent / ('.' + config['final_basename'] + '.done.json')).read_text(encoding='utf-8'))
                     self.assertEqual(receipt['run_id'], config['run_id'])
                     self.assertEqual(receipt['job_id'], config['final_basename'])
                     with self.assertRaises(ValueError):

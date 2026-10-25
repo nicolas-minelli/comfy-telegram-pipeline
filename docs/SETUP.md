@@ -1,212 +1,206 @@
-# Configuração do Comfy Telegram Pipeline
+# Comfy Telegram Pipeline setup
 
-Guia dos templates publicados, baseado na instalação Windows + Docker Desktop + n8n 2.43.7 reportada pelo operador. Leia também [DEPENDENCIES.md](DEPENDENCIES.md) e [MODELS.md](MODELS.md).
+Technical reference for the published templates, based on the operator-reported Windows + Docker Desktop + n8n 2.43.7 installation. Also read [DEPENDENCIES.md](DEPENDENCIES.md), [MODELS.md](MODELS.md), and the step-by-step [TUTORIAL.md](TUTORIAL.md).
 
-## 1. Escopo e isolamento
+## 1. Scope and isolation
 
-Este guia configura uma instalação nova a partir dos templates. Não é uma instrução para substituir a produção existente por arquivos sanitizados. Os testes reais anteriores validaram a instalação privada; ainda não foi realizado um teste completo de instalação limpa desses templates públicos.
+This guide prepares a new installation. Do not replace a working production deployment with sanitized templates. Earlier real tests validated the private deployment; a complete clean installation of the public templates has not yet been tested.
 
-Os templates contêm ID Telegram `0`, domínio `n8n.example.invalid` e caminhos de exemplo. Não devem ser ativados antes da configuração. O projeto ainda exige edição manual desses valores; não há configurador centralizado nesta entrega.
+Public templates use Telegram ID `0`, domain `n8n.example.invalid`, and example paths. Do not activate them before configuration. Prefer `tools/Initialize-Pipeline.ps1`: it prepares local copies outside the clone. The following sections document configuration contracts rather than requiring manual editing of every field.
 
-Mantenha o clone Git separado dos dados operacionais. Uma instalação de teste deve ter bot, banco/volume n8n e diretórios de mídia próprios. Não conecte dois supervisors ativos ao mesmo estado do scheduler, nem duas instâncias do Comfy ao mesmo volume de integração. Se usar duas instalações simultâneas na mesma máquina, configure também portas, URLs e instâncias Comfy independentes.
+Separate Git code from operational data. A test installation needs its own bot, n8n database/volume, media root, and Comfy instance. Never connect two active supervisors to the same scheduler state or two Comfy integrations to the same media volume. Concurrent installations also need distinct ports and URLs.
 
-Não use o bot de produção para testar outro Telegram Trigger: o Telegram registra somente um webhook por bot e um teste pode substituir o webhook que já funciona.
+Telegram registers one webhook per bot. Testing another Telegram Trigger with the production bot can replace its working webhook.
 
-## 2. Arquitetura e caminhos
+## 2. Architecture and paths
 
-Telegram → bot n8n → submissão autenticada → geração Comfy → prévia e aprovação → interpolação → upscale por batches → finalizador → notificação.
+Telegram → n8n bot → authenticated submission → Comfy generation → preview/approval → interpolation → batch upscale → finalizer → notification.
 
-| Dado | Windows, exemplo | Container n8n | Acesso |
+| Data | Windows example | n8n container | Access |
 |---|---|---|---|
-| Mídia e estado da integração | E:/AI/media | /files | Leitura e escrita |
-| Saída do Comfy | OUTPUT_REAL_DO_COMFY | /comfy-output | Somente leitura pelo n8n |
-| Banco, credenciais e binários n8n | Volume Docker dedicado | /home/node/.n8n | Persistente |
+| Media and integration state | E:/AI/media | /files | Read/write |
+| Comfy output | ACTUAL_COMFY_OUTPUT | /comfy-output | Read-only for n8n |
+| n8n database, credentials, binaries | Dedicated Docker volume | /home/node/.n8n | Persistent |
 
-O diretório real de saída precisa coincidir com o usado pelo Comfy e com `windows_output_root` no node Initialize Post Processing. O endereço Windows não é um caminho de container; /comfy-output não é um endereço que o Comfy Windows possa abrir.
+Actual Comfy output must match `windows_output_root` in Initialize Post Processing and the bind mount. A Windows path is not a container path; Windows Comfy cannot open `/comfy-output` as a host directory.
 
-No volume de mídia:
+Under the media root:
 
-- `current/`: imagens recebidas pelo bot, incluindo first frames enviados pelo Telegram.
-- `workflows/ltx.json`: template API de entrada do LTX.
-- `final/`: clipes finais e recibos.
-- `.telegram-ui/`: rascunhos, scheduler, incidentes, recibos de submissão e chave da integração, gerados durante o uso.
+- `current/`: received images, including Telegram first frames.
+- `workflows/ltx.json`: LTX API input template.
+- `final/`: final clips and receipts.
+- `.telegram-ui/`: generated drafts, scheduler, incidents, submission receipts, and integration key.
 
-Crie somente as pastas públicas necessárias. Não gere um control.json vazio por conta própria nem copie estado de produção para testar. O código inicializa seus arquivos conforme necessário.
+Create only needed public folders. Do not invent an empty control.json or copy production state into a test. Runtime code initializes its own files.
 
-## 3. Comfy e custom nodes
+## 3. Comfy and custom nodes
 
-1. Prepare uma instalação Comfy compatível com o inventário de nodes em DEPENDENCIES.md e disponibilize os seis modelos de MODELS.md.
-2. Instale o VideoHelperSuite na versão documentada. O commit não foi identificado; não invente um tag Git a partir da versão do Manager.
-3. Copie as duas pastas de `comfy/custom_nodes/` para `custom_nodes/` da instalação escolhida, preservando seus nomes.
-4. No Job Control, configure `SHARED_MEDIA_ROOT` para a raiz Windows montada como /files. O default de exemplo é E:/AI/media.
-5. No finalizador, configure `FINAL_DIRECTORY` como a subpasta final dessa mesma raiz. A recuperação do Job Control procura os clipes em SHARED_MEDIA_ROOT/final.
-6. Configure o ID Telegram conforme a seção seguinte antes de carregar o Job Control da nova instalação.
-7. Inicie o backend Comfy e confirme os logs de importação dos custom nodes. Para essa automação, não é necessário manter a janela Desktop aberta.
+1. Prepare Comfy with the classes listed in DEPENDENCIES.md and six models in MODELS.md.
+2. Install the documented VideoHelperSuite version. Its exact commit is unknown; do not infer a Git tag from a Manager version.
+3. Install both `comfy/custom_nodes/` folders into your selected Comfy `custom_nodes/`, preserving names.
+4. Set Job Control's `SHARED_MEDIA_ROOT` to the Windows root mounted at /files. The example default is E:/AI/media.
+5. Set the finalizer's `FINAL_DIRECTORY` to that root's final subfolder. Recovery searches SHARED_MEDIA_ROOT/final.
+6. Configure the Telegram ID consistently before loading Job Control.
+7. Start the backend and check plugin imports. Keeping the Desktop application window open is unnecessary for this automation.
 
-O processo Comfy deve continuar vivo após desconectar uma sessão SSH. Na implantação original isso é feito pelo controle via tarefa agendada; os scripts dessa operação ainda não fazem parte deste guia. Não confunda um processo iniciado na sessão SSH com um serviço persistente configurado.
+The Comfy process must survive SSH disconnection. The reference deployment uses scheduled-task control; those production service scripts are not included here. A foreground SSH process is not a configured persistent service.
 
-O backend deve ser alcançável pelo container em `http://host.docker.internal:8188`, ou no endereço/porta efetivamente configurados. Se ele escutar apenas na interface loopback do Windows, verifique a conectividade pelo container antes de alterar firewall ou interfaces. Ao habilitar escuta em outra interface, limite o acesso necessário no firewall; não publique a porta Comfy na Internet.
+The container must reach `http://host.docker.internal:8188`, or your actual endpoint. Check container connectivity before changing firewall/listening interfaces. If broader listening is needed, limit access with firewall rules. Do not publish Comfy to the Internet.
 
-### Chave do Job Control
+### Job Control key
 
-Ao carregar, o plugin gera ou lê `.telegram-ui/comfy-control.key` na raiz compartilhada. O arquivo deve ser o mesmo visto em /files/.telegram-ui/comfy-control.key pelo n8n. Não recrie a chave a cada inicialização e não a coloque no Git.
+On load, the plugin creates or reads `.telegram-ui/comfy-control.key`. n8n must see that same file at `/files/.telegram-ui/comfy-control.key`. Preserve it across restarts and keep it outside Git.
 
-A chave é usada como Bearer nos endpoints /n8n/jobs/* e como X-N8N-Recovery-Key no canal interno de recuperação. Ela não substitui a credencial Header Auth do webhook /start.
+It supplies Bearer authentication for `/n8n/jobs/*` and X-N8N-Recovery-Key for internal recovery. It does not replace Header Auth for `/webhook/start`.
 
-## 4. ID Telegram: configure todas as referências correlatas
+## 4. Correlated Telegram ID references
 
-O template atual atende um usuário em conversa privada. Configure user ID e chat ID correspondentes à mesma conversa autorizada; grupos/múltiplos usuários não foram validados neste projeto.
+Prefer the preparer, which updates related markers together in a private copy. The current application supports one authorized user in a private chat; groups/multiple users have not been validated.
 
-Na cópia local de implantação, substitua de forma consistente:
-
-| Marcador | Local / uso |
+| Marker | Location / purpose |
 |---|---|
-| ALLOWED_CHAT_ID = '0' e ALLOWED_USER_ID = '0' | Authorize Telegram Update no bot |
-| tg-0- | Regex de request_id, prefixos e glob de jobs nos Codes n8n e no Job Control Python |
-| /0-0.json | Caminho do rascunho em Restore Rejected Draft |
+| ALLOWED_CHAT_ID = '0' and ALLOWED_USER_ID = '0' | Authorize Telegram Update |
+| tg-0- | Request ID regexes, prefixes, and job globs in n8n Code nodes and Python Job Control |
+| /0-0.json | Draft path in Restore Rejected Draft |
 | telegram_chat_id: '0' | Initialize Post Processing |
-| chat_id:'0', chat_id: '0' e parâmetros chatId com valor 0 | Destinatários do handler, supervisor e demais notificações |
+| chat_id:'0', chat_id: '0', chatId value 0 | Handler, supervisor, and notification recipients |
 
-As funções comuns estão embutidas em vários nodes: configurar só o primeiro node do bot deixa recuperação, limpeza e alertas inconsistentes. Inspecione todos os cinco workflows normais e o Job Control. O fixture T5, se utilizado, também deve receber os mesmos ajustes na cópia de teste.
+Common helpers are embedded in multiple nodes. Editing only the first bot node leaves recovery, cleanup, and alerts inconsistent. Check all five regular workflows and Job Control; configure T5 identically if testing it.
 
-Não faça uma substituição global do caractere `0`: isso corromperia parâmetros numéricos, índices de saídas, FPS e outras validações. Use os marcadores completos e confirme as ocorrências antes de substituir. Mantenha a cópia configurada fora do Git, por exemplo em um diretório local production/ ignorado. Não use um ID fictício de outra pessoa para publicar exemplos.
+Never globally replace the character `0`: it would corrupt indices, numeric parameters, FPS, and validation. Use complete markers. Keep configured copies outside Git, for example in an ignored private production directory. Do not use another person's ID for published examples.
 
-## 5. Container n8n: requisitos de configuração
+## 5. n8n container requirements
 
-Mantenha n8n em uma única instância, com filesystem binary mode. A fila de jobs deste projeto é própria e não é o queue mode distribuído do n8n. Não adicionar Redis, múltiplos workers ou réplicas como se fossem equivalentes: os locks e reservas atuais dependem do contexto de execução configurado.
+Use one n8n instance with filesystem binary mode. This project's file-based scheduler is not n8n distributed queue mode. Adding Redis, replicas, workers, or external runners changes lock/execution assumptions and requires design review.
 
-Requisitos a verificar na configuração local Docker, sem substituir um compose de produção que já funciona:
+Verify these local requirements without replacing a working production Compose file:
 
-- Volume persistente em /home/node/.n8n para banco, configurações, credenciais e binários. Se houver N8N_ENCRYPTION_KEY explicitamente configurada, preservar seu valor no ciclo de backup/restauração, sem publicá-lo.
-- Bind mount da raiz de mídia em /files com escrita e saída Comfy em /comfy-output somente leitura.
-- `N8N_DEFAULT_BINARY_DATA_MODE=filesystem` para não manter clipes grandes inteiros no modo binário de memória. Isso não elimina todo o consumo de RAM dos nodes.
-- `N8N_RESTRICT_FILE_ACCESS_TO=/files;/comfy-output` para os nodes de arquivo, respeitando a sintaxe de lista separada por ponto e vírgula. Essa variável não deve ser tratada como sandbox universal para require('fs').
-- `NODE_FUNCTION_ALLOW_BUILTIN=fs` no runtime que efetivamente executa os Code nodes. Não é necessário liberar todos os módulos ou pacotes npm externos para estes templates.
-- TZ e GENERIC_TIMEZONE coerentes com o operador, por exemplo America/Sao_Paulo.
-- Porta HTTP do n8n acessível ao proxy local, sem uma publicação direta desnecessária na rede externa. Um exemplo de bind local é 127.0.0.1:5678:5678 quando o proxy roda no host.
-- Uma política de persistência e backup que mantenha as execuções em espera e os arquivos de estado necessários à retomada.
+- Persist `/home/node/.n8n`. If N8N_ENCRYPTION_KEY is explicitly set, preserve it with database backups without publishing it.
+- Mount media read/write at `/files`, and Comfy output read-only at `/comfy-output`.
+- Set `N8N_DEFAULT_BINARY_DATA_MODE=filesystem`. This reduces binary-storage RAM pressure; it does not remove all node memory use.
+- Set `N8N_RESTRICT_FILE_ACCESS_TO=/files;/comfy-output`, using semicolon-separated paths. This controls file nodes; it is not a universal sandbox for require('fs').
+- Allow `NODE_FUNCTION_ALLOW_BUILTIN=fs` in the runtime actually executing Code nodes. No wildcard or external npm package permission is needed.
+- Set TZ and GENERIC_TIMEZONE consistently, such as America/Sao_Paulo for the reference operator; adjust both for your location.
+- Expose n8n HTTP only as needed by the local proxy, for example a host-loopback bind. The generated lab uses 127.0.0.1:5681:5678.
+- Preserve waiting executions and integration state in your backup/retention policy.
 
-### Code nodes, runners e /proc
+### Code nodes, runners, and /proc
 
-Os Codes deste projeto usam o módulo fs, arquivos em /files e leituras de /proc/sys/kernel/random/boot_id e /proc/1/stat para construir um namespace de mutex por encarnação do container.
+Code nodes use fs, /files, `/proc/sys/kernel/random/boot_id`, and `/proc/1/stat` to derive a mutex namespace per container incarnation.
 
-Se houver task runners externos, a permissão de módulos deve estar na configuração efetiva dos runners; definir a variável apenas no container principal pode não bastar. Também é necessário validar volumes, permissões e o significado do namespace /proc no executor. Uma mudança de arquitetura dos runners exige rever a estratégia de locks, não apenas copiar uma variável de ambiente.
+For external task runners, module permissions must apply to the actual runner. Main-container variables alone may be insufficient. Validate mounts, permissions, and /proc identity on that executor. Changing runners requires revisiting locks, not merely copying an environment variable. This guide does not claim an external-runner topology is equivalent.
 
-Este guia não migra uma implantação funcionando para runners externos nem fornece um compose substituto presumidamente equivalente. A topologia atual é uma premissa a validar antes dessa mudança.
+### Internal addresses
 
-### Endereços internos
+For one n8n container:
 
-Na topologia de um container n8n:
+- Host Comfy: `http://host.docker.internal:8188`.
+- Bot → generation and supervisor → generation: `http://127.0.0.1:5678/webhook/start`.
+- Recovery wake: `http://127.0.0.1:5678/webhook/video-queue-reconcile`.
 
-- Comfy do host: http://host.docker.internal:8188.
-- Bot → geração e supervisor → geração: http://127.0.0.1:5678/webhook/start.
-- Wake de recuperação: http://127.0.0.1:5678/webhook/video-queue-reconcile.
+Update all corresponding HTTP nodes if topology changes. Do not replace internal URLs with public endpoints just to work around connectivity.
 
-Se mudar portas ou topologia, ajuste todos os HTTP Request correspondentes. Não troque URLs internas por um endpoint público só para resolver conectividade.
+## 6. Import without publishing
 
-## 6. Importe os workflows sem publicar
-
-Importe os cinco templates normais em workflows novos:
+Import new workflows in this order:
 
 1. Error Handler.
 2. LTX Generation.
 3. Automatic Recovery.
 4. Telegram Bot.
-5. Manual Recovery, usado somente por execução manual em emergência.
+5. Manual Recovery, for exceptional manual execution only.
 
-Não publique T5 como workflow normal. Uma pasta organizacional na interface n8n não altera os IDs dos workflows movidos, mas a importação em outra instalação pode gerar novos IDs.
+Do not publish T5 as a normal workflow. Moving workflows between n8n UI folders preserves existing workflow IDs; importing into another instance can create new IDs.
 
-Copie `comfy/templates/ltx.json` para a pasta de mídia `workflows/ltx.json`. Esse é o arquivo lido por Read Workflow LTX. Os grafos em comfy/api são exemplos de requests finais com inputs sintéticos; a interpolação e o upscale operacionais continuam montados pelos builders embutidos no n8n.
+Install `comfy/templates/ltx.json` as media/workflows/ltx.json for Read Workflow LTX. Files in comfy/api are synthetic final-request examples. Operational interpolation/upscale graphs remain embedded in builders.
 
-Configure também:
+Review these fields:
 
-- **Initialize Post Processing:** windows_output_root, container_output_root e telegram_chat_id. Os caminhos devem coincidir com os mounts e a saída do Comfy.
-- **Send Review Link:** substitua https://n8n.example.invalid/ pela base HTTPS privada usada pelo telefone para abrir o formulário. Preserve o caminho e a query assinada de resumeFormUrl; não remova a assinatura nem gere uma barra duplicada.
-- Demais HTTP Requests: porta e endereço do backend, se diferentes do padrão.
-- Todos os nodes com credencial sem seleção: vincule as credenciais locais conforme a próxima seção.
+- Initialize Post Processing: windows_output_root, container_output_root, telegram_chat_id, matching mounts/output.
+- Send Review Link: your private HTTPS base; preserve resumeFormUrl path and signed query and avoid double slashes.
+- HTTP Requests: actual backend address and port.
+- Every credential-dependent node: select local credentials.
 
-Não renomeie nodes por estética durante a configuração: há referências por nome nas expressões e Codes.
+Do not rename nodes for appearance during setup; expressions and Code blocks reference names.
 
-## 7. Credenciais: não confundir as três funções
+## 7. Three distinct credential roles
 
-| Função | Onde configurar | Conteúdo |
+| Role | Configure in | Value |
 |---|---|---|
-| Telegram | Telegram Trigger, nodes de mensagem, download e callback, inclusive handler e supervisor | Credencial Telegram local do bot dessa instalação |
-| Entrada LTX | Receive Request, Start Video Workflow e Resume Video Workflow | Mesma credencial Header Auth, por exemplo nome LTX Start Auth, header X-LTX-Token e valor aleatório local |
-| Integração Comfy e recuperação | Headers já expressos a partir de /files/.telegram-ui/comfy-control.key | Bearer para /n8n/jobs/* e X-N8N-Recovery-Key no wake/retomada |
+| Telegram | Trigger, messages, download, callback nodes, including handler/supervisor | Installation bot's native Telegram credential |
+| LTX entry | Receive Request, Start Video Workflow, Resume Video Workflow | Same Header Auth credential, e.g. LTX Start Auth, header X-LTX-Token, locally generated random value |
+| Comfy integration / recovery | Existing expressions reading /files/.telegram-ui/comfy-control.key | Bearer for /n8n/jobs/* and X-N8N-Recovery-Key for wake/resume |
 
-No Receive Request, mantenha Authentication=Header Auth. Nos dois HTTP Requests que chamam /start, selecione Generic Credential Type → Header Auth → a mesma credencial. No Resume Video Workflow, mantenha também X-N8N-Recovery-Key: ele é adicional, não substituto de X-LTX-Token.
+Receive Request must use Header Auth. Both callers of /start must select Generic Credential Type → Header Auth → the same credential. Preserve X-N8N-Recovery-Key on Resume Video Workflow in addition to X-LTX-Token.
 
-O wake interno já valida X-N8N-Recovery-Key no Code de autorização. Não acrescente por engano um header estático que fique diferente do arquivo de chave.
+The internal wake validates X-N8N-Recovery-Key in its authorization Code. Do not replace it with an unrelated static header.
 
-Selecione o Error Handler importado em Settings → Error Workflow no principal, bot e supervisor. Não configure o handler para chamar a si próprio. O Error Trigger não precisa ser publicado como um trigger agendado. Testes do handler devem provocar uma falha em uma execução automática real; um teste manual no editor não equivale a essa condição.
+In Settings → Error Workflow, select the imported handler for the main workflow, bot, and supervisor. Never bind the handler to itself. Error Trigger is not a scheduled trigger that needs publication. Test with an actual automatic execution failure; an editor's manual test is not equivalent.
 
-O Manual Recovery permanece sem publicação automática. Não habilite sua confirmação nem preencha uma execução por padrão: é uma ferramenta de emergência, sem reenvio de GPU.
+Keep Manual Recovery outside automatic publication. Do not prefill its confirmation/execution as a default. It is an emergency tool, not a GPU resubmission path.
 
-## 8. HTTPS, Telegram e aprovação privada
+## 8. HTTPS, Telegram, and private approval
 
-A implantação original separa duas superfícies:
+The reference deployment has two surfaces:
 
-- Endpoint HTTPS público que recebe somente os eventos do Telegram Trigger, por um proxy com rota/método explícitos.
-- Interface e formulários privados acessados pelo telefone via Tailscale.
+- Public HTTPS accepts only the actual Telegram Trigger's POST route through an explicit path/method proxy rule.
+- UI and approval forms are private, reached by the operator's phone through Tailscale.
 
-No seu proxy, permita no caminho público somente o POST da URL de produção efetiva do Telegram Trigger importado. A URL possui um identificador próprio dessa instalação. Não reutilize IDs de webhook do autor e não exponha genericamente /webhook/*, /webhook/start, o wake interno, a UI ou /n8n/jobs/*.
+Use this installation's generated production Trigger URL. Do not reuse the author's webhook ID or expose wildcard /webhook/*, /webhook/start, the internal wake, UI, or /n8n/jobs/*.
 
-O n8n 2.43.7 está depois da mudança documentada para `N8N_WEBHOOK_URL`, que substitui a antiga WEBHOOK_URL. Em configuração nova, consulte a documentação da versão e defina a base pública HTTPS correta. Se a produção já funciona com a variável antiga, não migre incidentalmente só para seguir este guia; a mudança precisa de uma validação separada do Telegram e dos formulários.
+For n8n 2.43.7, current configuration uses `N8N_WEBHOOK_URL`, replacing legacy WEBHOOK_URL. Confirm version documentation for a new deployment. Do not incidentally migrate a working legacy production setting without separate Telegram/form testing.
 
-Configure N8N_EDITOR_BASE_URL de acordo com a base privada da interface e N8N_PROXY_HOPS conforme o número real de proxies confiáveis. Não copie um número de hops sem conferir o caminho da requisição. O último proxy deve passar os headers encaminhados adequados.
+Set N8N_EDITOR_BASE_URL to the private UI base, and N8N_PROXY_HOPS to the real number of trusted proxies. Do not blindly copy a hops count. The last proxy must forward appropriate headers.
 
-Depois de importar, confira no próprio Telegram Trigger a URL de produção registrada e permita exatamente essa rota no proxy. O formulário do Wait usa URL por execução e não o endpoint de entrada do bot. O telefone precisa alcançar a base privada configurada em Send Review Link para aprovar.
+The Wait form has a per-execution URL, separate from the bot entry endpoint. The phone must reach the private base used by Send Review Link. User/chat IDs authorize incoming events but cannot prove the Internet POST originated from Telegram. Validate trigger/proxy origin protection, including preservation of X-Telegram-Bot-Api-Secret-Token for supported native Trigger versions.
 
-Os IDs de usuário/chat validados no primeiro Code autorizam os eventos que chegam ao workflow; isso não deve ser apresentado como prova de autenticidade criptográfica de um POST recebido pela Internet. A proteção do recebimento no proxy/trigger deve ser validada na implantação. Não declare o endpoint seguro somente porque o JSON contém o ID autorizado.
+Do not change an existing machine's Funnel/Serve rules merely to follow an example. Configure the routes generated for the specific installation.
 
-Não altere as regras atuais de Funnel/Serve da máquina para executar um exemplo de documentação. A configuração do proxy deve ser feita para a instalação correspondente, com os caminhos gerados nela.
+## 9. Preflight and activation
 
-## 9. Pré-verificação e ativação
+Before publishing the bot, confirm:
 
-Antes de publicar o bot, confirme:
+1. Windows media and /files refer to the same root; key exists without displaying it.
+2. GET /queue responds from the container's endpoint.
+3. Authenticated GET /n8n/jobs/health reports protocol 2, expected plugin, correct roots, finalizer_available/finalizer_named_output true, and required capabilities.
+4. All inventoried nodes exist in object_info. Health does not check available RAM/VRAM or every model file.
+5. Credentials are selected; no operational ID zero, .invalid domain, or LOCAL_USER placeholder remains.
+6. /files/workflows/ltx.json exists and models appear in loaders.
+7. Error Workflow bindings point to the imported handler.
+8. No duplicate supervisor/bot workflow controls the same bot/state.
 
-1. Mesmo diretório de mídia visto no Windows e em /files; chave existente sem exibir seu conteúdo.
-2. GET /queue responde no endereço visto pelo container.
-3. GET /n8n/jobs/health responde com Authorization Bearer local e informa protocolo 2, plugin esperado, roots corretos, finalizer_available e finalizer_named_output true, além das capabilities utilizadas pelo projeto.
-4. Todos os nodes do inventário aparecem no object_info. Health do Job Control não é teste de disponibilidade de RAM/VRAM nem de todos os modelos.
-5. As credenciais foram selecionadas; nenhum ID Telegram 0 operacional, domínio .invalid ou LOCAL_USER ficou configurado por engano.
-6. O template LTX existe em /files/workflows/ltx.json e os nomes de modelos existem nos loaders.
-7. O Error Workflow de cada componente aponta ao handler importado.
-8. Não há outro supervisor nem outro bot workflow operando sobre o mesmo bot/estado.
+Publish main LTX → supervisor → Telegram bot. Keep Manual Recovery/T5 out of normal activation. Publishing the supervisor starts its schedules, so finish root/key/state checks first.
 
-Publicação sugerida: principal LTX → supervisor → bot Telegram. O handler usa Error Trigger, e Manual Recovery/T5 ficam fora da publicação normal. A publicação do supervisor inicia seus agendamentos: execute-a somente com mounts, roots, chave e estado já conferidos.
+The supervisor has 20 nodes and two independent minute schedules: Recovery Schedule and Error Alert Schedule. The second handles incident messages, not GPU submissions. Two lightweight runs per minute alone do not indicate repeated queue recovery.
 
-O supervisor atualizado possui 20 nodes e duas rotas de agendamento independentes: Recovery Schedule e Error Alert Schedule. A segunda trata incidentes/alertas; não submete GPU. Duas execuções leves por minuto, por si só, não significam que a fila esteja sendo recuperada repetidamente.
+## 10. First test
 
-## 10. Primeiro teste
+1. Send /start to the test bot; check commands and a button callback.
+2. Submit one short first-frame job with an explicit aspect ratio and supported duration.
+3. Check current/, Comfy submission, and status progression. Initial webhook acknowledgment is not GPU acceptance.
+4. Open the preview/form on the phone's private network. Leave it waiting to verify approval is required.
+5. Approve; check FILM, batch8 upscale, final filename, and receipt. Publication must wait for the complete video.
+6. Check final notification and released reservation.
+7. In separate tests, reject/retry, stop/status, then multiple jobs.
+8. Run T5 separately: intentional pre-sampling HTTP400, classified incident, evidence-based reservation release, no blocked queue. Disable T5 afterward. Alert retries reuse the incident without regenerating video.
 
-1. No bot de teste, envie /start. Confira comandos e callback de botão.
-2. Envie um first frame e crie um único job curto, com duração suportada e proporção explícita.
-3. Confira o arquivo recebido em current, a submissão ao Comfy e a evolução do job. A resposta de recebimento do webhook não é confirmação de que a GPU aceitou o prompt.
-4. Abra a prévia e o formulário no telefone conectado à rede privada. Deixe o job aguardando para confirmar que não avança sem sua decisão.
-5. Aprove. Confira interpolação, upscale batch8 e finalização no diretório final com o nome do job. O finalizador só deve publicar depois da conclusão do vídeo.
-6. Confira que a notificação final chegou uma vez e que a reserva foi liberada.
-7. Em outro teste, rejeite e recupere o rascunho via retry; confira também stop e status antes de usar múltiplos jobs.
-8. T5 é um teste separado: rejeição HTTP400 intencional antes do sampling, incidente classificado, reserva liberada por evidência e fila sem bloqueio. Despublique-o depois. A retentativa de alerta deve reutilizar o mesmo incidente, sem reenviar geração.
+Do not force RAM exhaustion or crash the PC for basic validation. Restart recovery comes later with a controlled job and verified checkpoints.
 
-Não force falta de RAM nem derrube o computador para validar a instalação básica. Cenários de recuperação após reinício são testes posteriores, com um job controlado e checkpoints conferidos.
+## 11. Persistence and updates
 
-## 11. Dados persistentes e atualização
+Back up n8n's database/configuration and encryption key, /files state/receipts/integration key, and referenced media as a consistent set. Git does not replace operational backup. Never use `docker compose down -v` to update persistent data.
 
-Um backup operacional precisa tratar como conjunto o banco/configuração do n8n, sua chave de criptografia, o volume /files com estado/recibos/chave e os arquivos de vídeo referenciados. O repositório Git não substitui esse backup. Não use docker compose down -v para atualizar uma instância que precisa preservar dados.
+Control the queue and save private exports before changing production. Do not apply a sample Compose file to production volumes or overwrite configured plugins with inert public templates.
 
-Atualize com a fila controlada e export privado antes da mudança. Não rode um compose de exemplo sobre o volume de produção nem sobrescreva os custom nodes configurados com os templates públicos inertes.
+## 12. Official references
 
-## 12. Referências oficiais
+- [n8n Docker](https://docs.n8n.io/deploy/host-n8n/install-options/install-with-docker)
+- [File access](https://docs.n8n.io/integrations/builtin/core-nodes/n8n-nodes-base.readwritefile)
+- [Code modules](https://docs.n8n.io/deploy/host-n8n/configure-n8n/basic-configuration/configuration-examples/enable-modules-in-code-node)
+- [Task runners](https://docs.n8n.io/deploy/host-n8n/configure-n8n/set-up-task-runners)
+- [Binary data](https://docs.n8n.io/deploy/host-n8n/configure-n8n/scaling/handle-binary-data.md)
+- [Reverse proxy](https://docs.n8n.io/deploy/host-n8n/configure-n8n/basic-configuration/configuration-examples/configure-webhook-urls-with-reverse-proxy)
+- [Telegram Trigger issues](https://docs.n8n.io/integrations/builtin/trigger-nodes/n8n-nodes-base.telegramtrigger/common-issues)
+- [Wait](https://docs.n8n.io/integrations/builtin/core-nodes/n8n-nodes-base.wait)
 
-- Docker n8n: https://docs.n8n.io/deploy/host-n8n/install-options/install-with-docker
-- Acesso a arquivos no n8n: https://docs.n8n.io/integrations/builtin/core-nodes/n8n-nodes-base.readwritefile
-- Módulos dos Code nodes: https://docs.n8n.io/deploy/host-n8n/configure-n8n/basic-configuration/configuration-examples/enable-modules-in-code-node
-- Task runners: https://docs.n8n.io/deploy/host-n8n/configure-n8n/set-up-task-runners
-- Binários em filesystem: https://docs.n8n.io/deploy/host-n8n/configure-n8n/scaling/handle-binary-data.md
-- Proxy e webhook URL: https://docs.n8n.io/deploy/host-n8n/configure-n8n/basic-configuration/configuration-examples/configure-webhook-urls-with-reverse-proxy
-- Telegram Trigger: https://docs.n8n.io/integrations/builtin/trigger-nodes/n8n-nodes-base.telegramtrigger/common-issues
-- Wait: https://docs.n8n.io/integrations/builtin/core-nodes/n8n-nodes-base.wait
-
-Referências consultadas em 24/10/2026. Os requisitos ligados aos templates foram conferidos nos arquivos; o guia inteiro ainda precisa de uma execução em instalação limpa. Não contém tokens, chaves reais ou URLs privadas de produção.
+References reviewed on October 24, 2026. Template-specific requirements were checked locally; the entire guide still needs a clean-install run. No real tokens, keys, or private production URLs are included.

@@ -1,50 +1,77 @@
 # Comfy Telegram Pipeline
 
-Automação local de geração e pós-processamento de vídeos com Telegram, n8n e Comfy.
+Local video production with **Telegram + n8n + Comfy**: send an image, choose an aspect ratio and duration, track the queue, approve the preview, and receive confirmation when your final clip is ready.
 
-Telegram → first frame e parâmetros → fila de geração LTX → prévia e aprovação → interpolação → upscale → arquivo final e notificação.
+**Flow:** first frame → LTX at 30 FPS → preview → approval → FILM 2x → batch upscale → MP4 at 60 FPS → notification.
 
-O supervisor organiza a recuperação da fila e o reenvio de alertas persistentes. O Error Handler registra incidentes e trata a reserva conforme a evidência disponível, sem reenviar automaticamente um POST de geração cujo resultado seja incerto.
+## Start here
 
-## Estado desta entrega
+| Guide | Contents |
+|---|---|
+| [Complete tutorial](docs/TUTORIAL.md) | Step-by-step setup, PowerShell automation, operation, and 44 FAQ answers with examples |
+| [Technical setup](docs/SETUP.md) | Volumes, credentials, URLs, and contracts between components |
+| [Dependencies](docs/DEPENDENCIES.md) | Reference versions and required nodes |
+| [Models](docs/MODELS.md) | Exact filenames, sources, and destination folders |
+| [Project review](docs/PROJECT-REVIEW.md) | Findings, validation, and limitations |
 
-Este snapshot contém somente os seis exports preparados como templates para revisão pública. Não é ainda uma instalação completa: scripts de operação e documentação completa serão integrados separadamente antes da publicação do projeto.
+![Comfy Telegram Pipeline flow](docs/assets/pipeline-flow.png)
 
-Os exports de produção recebidos foram usados como referência. A limpeza não foi aplicada à instalação em produção.
+[Editable vector infographic](docs/assets/pipeline-flow.svg).
 
-## Arquivos
+## Features
 
-- `workflows/ltx-generation.template.json`: geração, aprovação, interpolação e upscale.
-- `workflows/telegram-bot.template.json`: interface do bot e controles de jobs.
-- `workflows/automatic-recovery.template.json`: supervisor, incluindo a rota de alertas da v2.
-- `workflows/error-handler.template.json`: handler de incidentes e notificações.
-- `workflows/manual-recovery.template.json`: liberação manual de emergência, sem reenvio.
-- `comfy/api/`: grafos de execução extraídos dos builders n8n; consulte `comfy/README.md`.
-- `tests/fixtures/t5-controlled-failure.template.json`: teste que rejeita intencionalmente a submissão, usando um tipo de node inexistente. Não deve ser usado como workflow normal.
+- Telegram wizard: first frame as a file, 9:16/16:9, 2/4/6/8 seconds, and prompts without JSON.
+- Multiple requests queued through the scheduler and integration reservations.
+- Explicit approval before interpolation and upscale.
+- Checkpoint recovery and reconciliation of submissions with uncertain outcomes.
+- Rejected-parameter retry, list cleanup, eligible-file deletion, and global stop.
+- Persistent incidents and supervisor retries for failed alert delivery.
+- Upscale in batches of 8, connected audio, and verified final-publication receipts.
 
-## Templates desativados
+| Aspect ratio | LTX generation | Output for new jobs |
+|---|---|---|
+| 9:16 | 544x960, 30 FPS | 1088x1920, 60 FPS |
+| 16:9 | 960x544, 30 FPS | 1920x1088, 60 FPS |
 
-Todos os workflows estão desativados. Os vínculos a credenciais, IDs de webhook, IDs de workflows instalados, tags, metadados da instância e associações ao Error Workflow foram retirados. Os IDs dos nodes foram regenerados de modo determinístico.
+## Assisted setup
 
-As opções que exigem autenticação foram preservadas. Credenciais precisam ser selecionadas localmente depois da importação. Não desabilite a autenticação para contornar a falta de configuração.
+Read the tutorial first. Public templates contain Telegram ID zero, an example domain, and no selected credentials. The preparer creates private copies outside Git; it neither replaces production files nor starts services.
 
-O ID autorizado do Telegram foi substituído por `0` em todas as referências correlatas, inclusive validações de request_id e caminhos de rascunhos. É um valor inerte, não uma configuração operacional. A futura configuração deverá atualizar essas referências de forma consistente em todos os componentes; estes arquivos não são uma atualização para importar em produção.
+```powershell
+.\tools\Initialize-Pipeline.ps1 `
+    -BaseRoot 'E:\AI\services\comfy-pipeline-lab' `
+    -TelegramUserId (Read-Host 'Your numeric Telegram user ID') `
+    -ComfyOutputRoot 'E:\AI\output\comfy-pipeline-lab' `
+    -PrivateBaseUrl (Read-Host 'Your private HTTPS base URL') `
+    -PublicWebhookBaseUrl (Read-Host 'Your public bot HTTPS base URL')
+```
 
-O domínio pessoal foi substituído por `https://n8n.example.invalid`. As URLs locais `127.0.0.1` e `host.docker.internal`, bem como caminhos genéricos do container, foram mantidos porque descrevem a arquitetura, não credenciais.
+The Comfy output directory must exist and belong to the selected test instance. Select credentials and Error Workflow in n8n. HTTPS/proxy configuration and model installation are also local tasks. The generated Compose file is a lab reference, not an automatic production migration.
 
-## Segurança
+## Repository layout
 
-Nunca versione chaves, tokens, senhas, volumes do n8n, backups da instalação ou exports de produção. Use credenciais locais do n8n e arquivos de segredo fora do repositório. A conta autorizada e os diretórios de mídia também precisam de configuração local consistente com os custom nodes.
+- `workflows/`: five regular n8n templates.
+- `tests/fixtures/`: controlled-failure T5, excluded from normal operation.
+- `comfy/templates/ltx.json`: input template read by n8n after installation at `/files/workflows/ltx.json`.
+- `comfy/api/`: final graphs generated by n8n builders using synthetic inputs.
+- `comfy/custom_nodes/`: project Job Control and Video Finalizer plugins.
+- `tools/`: preparation, installation, diagnostics, and export utilities.
+- `docs/`: tutorial, inventories, review, and infographic.
 
-O `.gitignore` é uma proteção contra inclusão acidental; não é um scanner e não remove arquivos já versionados. A verificação deste snapshot tem limites, descritos em `EXPORT-REVIEW.md`.
+## Offline verification
 
-## Validação
+```powershell
+.\tools\Test-Repository.ps1
+```
 
-Seis JSONs n8n, 380 nodes: parse JSON, integridade das conexões e compilação sintática dos blocos jsCode aprovados. A limpeza removeu 31 vínculos de credenciais e 86 IDs de webhook. Não foi feito teste de execução dos templates limpos em n8n ou na GPU. Os resultados de produção anteriores não equivalem a validar estes templates após a limpeza.
+Requires Node.js and Python 3.10+; use `-PythonPath` to select your Comfy Python. The wrapper checks PowerShell syntax and runs tests without GPU, n8n, or Telegram. The exporter deterministically rewrites example graphs.
 
+## Security and project status
 
-## Grafos Comfy
+Derived from a working private installation, with personal data and credential bindings removed. Private runtime data, keys, databases, media, and tokens stay outside this repository.
 
-Os arquivos em comfy/api são produzidos pelos builders atuais do n8n para as duas proporções. Execute node tools/export-runtime-graphs.cjs para reproduzi-los. Inputs privados foram substituídos por dados sintéticos. A integração ainda não é uma instalação completa, pois faltam os scripts operacionais e a configuração completa.
+Offline tests have run. Updated PowerShell wrappers and the lab Compose deployment still need Windows and clean-install validation. Telegram delivery is not guaranteed exactly once. Sufficient model resources remain necessary. `/stop` affects the entire Comfy queue; a dedicated instance is recommended.
 
-Os custom nodes próprios confirmados estão em comfy/custom_nodes. Configure-os conforme comfy/README.md. Os arquivos de chave reais e dados do scheduler não são incluídos.
+Bot ID checks do not replace public webhook origin verification. Read the tutorial before exposing endpoints. VHS videos may embed workflow metadata; review it before sharing examples.
+
+No model weights are redistributed. Dependencies retain their own licenses. A license for this project's code has not yet been selected. CI/CD is not implemented in this delivery.

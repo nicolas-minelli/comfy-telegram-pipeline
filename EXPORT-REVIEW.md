@@ -1,50 +1,58 @@
-# Revisão dos exports — 24/10/2026
+# Export review — October 24, 2026
 
-## Escopo
+## Scope
 
-Seis exports atuais: principal LTX, Telegram Bot, supervisor Automatic Recovery v2, Error Handler v2 e cópia de falha controlada T5. O Manual Recovery foi recebido e incluído depois da primeira remessa.
+Six exports: main LTX, Telegram Bot, Automatic Recovery v2 supervisor, Error Handler v2, controlled-failure T5, and Manual Recovery. Manual Recovery was included after the initial batch.
 
-## Observações da entrada
+## Input observations
 
-- Sem pinData ou staticData preenchidos.
-- Headers de autorização dos endpoints Comfy usam expressões; não havia token literal nesses campos.
-- Havia referências locais a credenciais, identificadores de webhook, metadados da instância, usuário autorizado e domínio pessoal.
-- A presença de um ID/nome de credencial não significa que o token correspondente estava no export. Os vínculos foram removidos mesmo assim para distribuir exemplos independentes da instalação.
+- No populated pinData or staticData.
+- Authorization headers for Comfy endpoints used expressions, without literal tokens in those fields.
+- Exports contained local credential references, webhook identifiers, instance metadata, an authorized user, and a personal domain.
+- Credential IDs/names do not imply the associated token was present in the export. Bindings were removed to distribute installation-independent examples.
 
-## Alterações na cópia
+## Changes to the distribution copy
 
-- Removidos 31 vínculos a credenciais e 86 IDs de webhook.
-- Removidos metadados da instância, IDs/version IDs dos workflows, tags e grupos exportados.
-- Removidas associações locais a Error Workflow; precisarão ser reconfiguradas.
-- Todos os templates desativados e sem dados fixados.
-- IDs internos de nodes regenerados; nomes e conexões preservados.
-- ID autorizado substituído por zero nas referências correlatas e domínio pessoal por exemplo inválido.
-- T5 separado em tests/fixtures e mantido desativado.
-- Não foram alterados os arquivos de produção, modelos ou segredos locais.
+- Removed 31 credential bindings and 86 webhook IDs.
+- Removed instance metadata, root workflow/version IDs, exported tags, and groups.
+- Removed local Error Workflow associations; configure these after import.
+- Disabled all templates and cleared pinned data.
+- Regenerated internal node IDs, preserving node names and connections.
+- Replaced the authorized ID with zero in related references, and the personal domain with an invalid example.
+- Isolated T5 under `tests/fixtures`, disabled.
+- Left production files, models, and local secrets untouched.
 
-## Verificações
+## Checks
 
-- Seis JSONs n8n válidos, 380 nodes e conexões com destinos existentes.
-- Sintaxe de todos os blocos JavaScript jsCode validada com o construtor AsyncFunction do Node.js, sem executar os blocos.
-- Ausência dos marcadores pessoais conhecidos, IDs raiz dos workflows de origem, padrões de token Telegram e literais hexadecimais de 64 caracteres nos templates finais.
-- Sem vínculos a credenciais ou IDs de webhook remanescentes nos nodes.
+- Six valid n8n JSON files; 380 nodes with valid connection targets.
+- All JavaScript jsCode blocks syntax-checked with Node's AsyncFunction constructor, without executing them.
+- Checked the final templates for known personal markers, original root workflow IDs, Telegram token patterns, and 64-character hexadecimal literals.
+- No remaining node credential bindings or webhook IDs.
 
-## Limites e próximos passos
+## Limits and next steps
 
-Esta revisão não garante detecção de todo formato possível de segredo. Não se deve colocar no mesmo commit nenhum export bruto, volume Docker, .env, chave ou log. Antes do primeiro push, revisar a lista exata de arquivos staged e executar um scanner de segredos sobre o repositório e o histórico que será enviado.
+This review cannot detect every possible secret format. Never include raw exports, Docker volumes, `.env`, keys, or logs in the same commit. Before pushing, review the exact staged files and scan both repository contents and the history being published.
 
-O snapshot ainda não inclui automação de configuração, scripts de build/operação nem uma licença. A integração desses componentes exige nova revisão de dados pessoais e de consistência. Não publique ainda como release instalável.
+The package includes local configuration preparation, diagnostics, and a tutorial. It does not include a selected project license or a complete production service/update system. See `docs/PROJECT-REVIEW.md` for additional review and tests. Validate a clean installation and the Windows wrappers before advertising an installable release.
 
-Na pasta Windows chamada production, mantenha somente arquivos privados da instalação. Esse nome não muda o armazenamento interno do n8n; ele só organiza os exports que você gravar ali.
+Keep private installation files in your Windows `production` folder. That name only organizes exported files; it does not change n8n's internal storage.
 
-## Complemento Comfy atualizado
+## Updated Comfy graphs
 
-Os exports antigos de referência de interpolação e upscale foram removidos. Os cinco grafos em comfy/api foram extraídos executando os builders atuais do n8n com dados sintéticos, para 9:16 e 16:9. O template LTX de entrada está em comfy/templates.
+Old reference interpolation/upscale exports were replaced. The five graphs in `comfy/api` come from the current n8n builders executed with synthetic inputs for 9:16 and 16:9. The LTX input template is in `comfy/templates`.
 
-Verificados loader VHS_LoadVideoPath, batch8, áudio, dimensões por proporção, finalizador, conexões e IDs dinâmicos substitutos. O script de reprodução não executa o scheduler nem faz submissões à GPU. Não houve alteração da produção.
+Checked VHS_LoadVideoPath, batch size 8, audio, aspect-specific dimensions, finalizer, connections, and substitute dynamic IDs. The reproduction script neither runs the scheduler nor submits GPU work. Production was not changed.
 
-## Custom nodes confirmados
+## Confirmed custom nodes
 
-Ambos os arquivos recebidos são idênticos ao último pacote instalado. Job Control: substituído o ID Telegram pessoal por zero, sem alterar as validações/autenticação. Finalizador: conteúdo preservado. Diretórios E:\AI\media e E:\AI\media\final mantidos como defaults documentados para configuração local, não como segredos.
+Both received files matched the installed package. Job Control's personal Telegram ID was replaced with zero without changing authorization/validation behavior. The finalizer was preserved. `E:\AI\media` and `E:\AI\media\final` remain documented local defaults, not secrets.
 
-Corrigidos os dados sintéticos dos grafos: run_id tg-0-1-e1 e prefixo de saída por execução, conforme as restrições do finalizador. Isso corrige somente os exemplos de distribuição. Não houve mudança na instalação em produção.
+Synthetic graph inputs now use run_id `tg-0-1-e1` and an execution-specific output prefix, satisfying finalizer constraints. This fixes distribution examples only.
+
+## Tutorial and automation
+
+Includes an operational guide, FAQ examples, SVG/PNG infographic, and scripts that prepare local copies only. No key/token is embedded. The ID-discovery helper requests a new test bot's token with hidden input and refuses to replace an existing webhook. It has not been run with real credentials during this review.
+
+## English distribution
+
+Documentation, tutorials, infographic labels, Telegram messages, help text, status descriptions, and script prompts are provided in English. Functional identifiers, node names, connections, commands, and protocol fields are preserved. Translation is not a production deployment or a change to the integration protocol.
