@@ -1,6 +1,8 @@
 # Comfy Telegram Pipeline
 
-**Release status: `v1.0.0-preview.1` — preview, not a clean-install-validated stable release.**
+**Project status: open-source portfolio project · preview release.**
+
+Based on a working personal deployment. PowerShell parse checks, five API graph checks, and six offline tests passed on Windows. A clean installation has not been validated. Issues and pull requests are welcome; support and response times are not guaranteed.
 
 Local video production with **Telegram + n8n + Comfy**: send an image, choose an aspect ratio and duration, track the queue, approve the preview, and receive confirmation when your final clip is ready.
 
@@ -79,3 +81,10 @@ Bot ID checks do not replace public webhook origin verification. Read the tutori
 Original project code and documentation are available under the [MIT License](LICENSE), copyright (c) 2026 Nicolas Minelli. Third-party materials retain their own licenses; this license does not relicense n8n, Comfy, plugins, or model weights. No weights are redistributed. CI/CD is not implemented in this delivery.
 
 See [preview release notes](docs/releases/v1.0.0-preview.1.md) and the [release procedure](docs/RELEASING.md).
+
+
+## Contributing and support
+
+Bug reports, documentation improvements, and focused pull requests are welcome. Start with [CONTRIBUTING.md](CONTRIBUTING.md). Use the issue templates to provide a minimal reproduction and sanitized environment details. For vulnerabilities or exposed credentials, follow [SECURITY.md](SECURITY.md) instead of posting sensitive details publicly.
+
+This is a portfolio/community project maintained as time permits, without a support SLA or guaranteed maintenance schedule. Publishing the preview makes the implementation available for study and contribution; it is not a claim of production readiness or universal hardware compatibility. Clean-install testing remains unperformed, not a prerequisite the maintainer has committed to completing.

@@ -1,0 +1,42 @@
+name: Feature request
+description: Propose a focused improvement and explain the problem it solves.
+title: "[Feature]: "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Suggestions are welcome. Acceptance, implementation, and response times are not guaranteed.
+        Do not disclose sensitive deployment information or vulnerabilities in this form.
+  - type: checkboxes
+    id: preflight
+    attributes:
+      label: Before proposing
+      options:
+        - label: I searched existing requests and checked the current documented behavior.
+          required: true
+        - label: This request contains no credentials or private deployment data.
+          required: true
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem or use case
+      description: Describe the current limitation and who benefits. Explain why the current workflow is insufficient.
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed behavior
+      description: Describe the smallest useful change and a concrete before/after example.
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives and tradeoffs
+      description: Include simpler alternatives, RAM/GPU impact, compatibility, or maintenance cost if relevant. It is fine to state unknown.
+  - type: textarea
+    id: scope
+    attributes:
+      label: Affected components and validation ideas
+      description: Mention expected workflow/plugin/configuration changes and how success could be tested, if known. Do not implement a broad redesign before discussing it.

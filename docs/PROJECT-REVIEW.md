@@ -61,7 +61,9 @@ Credential selection, Error Workflow binding, and HTTPS proxy setup remain manua
 - No pwsh/powershell exists in this Linux environment. The operator subsequently confirmed Windows PowerShell parser checks and all six offline tests passing. Setup helpers still require live Windows/runtime validation.
 - New Docker/HTTPS/n8n/GPU/Telegram services were not started. Earlier private-runtime tests are not a new test of the lab Compose deployment.
 
-## Next operator tests
+## Optional future validation
+
+The maintainer has chosen to publish this as a portfolio/community preview and is not committing to a clean-install test. The following remains a useful validation path for future contributors, not a promised maintainer schedule. Windows parser/offline checks have already been confirmed.
 
 1. Extract the update into the clone and run Test-Repository with Comfy Python.
 2. Prepare a new root without starting another supervisor against production media.
@@ -84,3 +86,8 @@ All six tests passed after the fix, including a run with implicit Path/subproces
 ## English localization review
 
 The public distribution now uses English documentation, tutorial/FAQ, infographic, script prompts, and workflow messages. The translation pass checks JavaScript structure while allowing only string/template text changes, and preserves node identities and connections. Regenerate API examples from the translated builders before packaging. This work does not change the protocol, authenticate a live endpoint, or validate a production upgrade.
+
+
+## Portfolio/community publication
+
+The current README describes the project as an open-source portfolio preview. CONTRIBUTING.md, SECURITY.md, structured bug/feature forms, and a PR template explain contribution scope and sanitized reporting. No support SLA or clean-install validation is promised. These files do not enable GitHub Issues, private vulnerability reporting, rulesets, or public visibility automatically; see MAINTAINER.md for repository settings. No runtime protocol, workflow, model, or production setting changed in this documentation update.

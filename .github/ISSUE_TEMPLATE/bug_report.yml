@@ -1,0 +1,76 @@
+name: Bug report
+description: Report a reproducible problem using sanitized information.
+title: "[Bug]: "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        This is a portfolio/community preview; clean-install validation and guaranteed support are not provided.
+        For vulnerabilities or leaked secrets, follow the Security Policy instead. Never attach raw exports, credentials, databases, signed approval links, or private media.
+  - type: checkboxes
+    id: preflight
+    attributes:
+      label: Before reporting
+      options:
+        - label: I searched existing issues and checked the tutorial/FAQ.
+          required: true
+        - label: I removed credentials, signed links, personal IDs, hostnames, and private runtime data from this report and any attachments.
+          required: true
+        - label: This is an ordinary bug report, not a vulnerability disclosure.
+          required: true
+  - type: textarea
+    id: environment
+    attributes:
+      label: Versions and environment
+      description: Include project tag/commit, OS, PowerShell, n8n, Comfy, relevant plugin versions, and GPU/RAM if relevant. Use unknown where needed; do not paste complete environment variables or docker inspect.
+      placeholder: |
+        Project: v1.0.0-preview.1
+        OS / PowerShell:
+        n8n / Docker:
+        Comfy / plugins:
+        GPU / VRAM / RAM, if relevant:
+        Existing personal deployment or new installation:
+    validations:
+      required: true
+  - type: dropdown
+    id: component
+    attributes:
+      label: Affected area
+      options:
+        - Setup or documentation
+        - Telegram commands or callbacks
+        - Submission or queue admission
+        - LTX generation or preview
+        - Approval or rejection
+        - Interpolation
+        - Upscale or final publication
+        - Stop, deletion, or recovery
+        - Error handler or notifications
+        - Other or unknown
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Minimal reproduction
+      description: Steps using synthetic data. State the relevant node/stage and whether the behavior repeats. Do not test on somebody else's infrastructure.
+      placeholder: |
+        1. Start from ...
+        2. Send/click ...
+        3. Observe ...
+    validations:
+      required: true
+  - type: textarea
+    id: expected_actual
+    attributes:
+      label: Expected and actual behavior
+      description: Explain both, including whether Comfy still has running/pending tasks. A timeout alone does not establish an out-of-memory failure.
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Sanitized evidence and checks
+      description: Short relevant error, node name, HTTP/exit code, and diagnostic summary. Mask job IDs if they contain your Telegram ID. Prefer selected text over full logs or exports. Write none if unavailable.
+    validations:
+      required: true
